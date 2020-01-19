@@ -12,18 +12,18 @@ type IntVar struct {
 
 // NewIntVar build new int var
 func NewIntVar(name, defaultVal, usage string, required bool) *StringVar {
-	sv := &StringVar{Var: createVar(name, usage, required), val: defaultVal}
-	flag.StringVar(&sv.val, name, "", usage)
+	iv := &StringVar{Var: createVar(name, usage, required), val: defaultVal}
+	flag.StringVar(&iv.val, name, "", usage)
 
-	return sv
+	return iv
 }
 
-func (sv *IntVar) GetVal() (val int, err error) {
-	if sv.required && sv.val == 0 {
-		err = fmt.Errorf(sv.usage)
+func (iv *IntVar) GetVal() (val int, err error) {
+	if iv.required && iv.val == 0 {
+		err = fmt.Errorf("%s cannot be zero value, %s", iv.name, iv.usage)
 		return
 	}
 
-	val = sv.val
+	val = iv.val
 	return
 }

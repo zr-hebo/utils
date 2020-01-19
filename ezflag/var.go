@@ -1,6 +1,9 @@
 package ezflag
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+)
 
 var (
 	allVariables  = make([]Vari, 0, 8)
@@ -61,4 +64,8 @@ func PrintAllUsage()  {
 			fmt.Printf("--%s\t%s\n", v.Name(), v.Usage())
 		}
 	}
+}
+
+func Parse()  {
+	flag.Parse()
 }

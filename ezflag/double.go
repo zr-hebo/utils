@@ -20,7 +20,7 @@ func NewFloat64Var(defaultVal float64, name, usage string, required bool) *Float
 
 func (dv *Float64Var) GetVal() (val float64, err error) {
 	if dv.required && dv.val == 0 {
-		err = fmt.Errorf(dv.usage)
+		err = fmt.Errorf("%s cannot be zero value, %s", dv.name, dv.usage)
 		return
 	}
 
