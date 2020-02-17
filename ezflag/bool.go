@@ -10,7 +10,7 @@ type BoolVar struct {
 }
 
 // NewBoolVar build new bool var
-func NewBoolVar(defaultVal bool, name, usage string, required bool) *BoolVar {
+func NewBoolVar(name string, defaultVal bool, usage string, required bool) *BoolVar {
 	bv := &BoolVar{Var: createVar(name, usage, required), val: defaultVal}
 	flag.BoolVar(&bv.val, name, defaultVal, usage)
 
