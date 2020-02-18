@@ -7,13 +7,13 @@ import (
 
 type IntVar struct {
 	Var
-	val int
+	val int64
 }
 
 // NewIntVar build new int var
-func NewIntVar(name, defaultVal, usage string, required bool) *StringVar {
-	iv := &StringVar{Var: createVar(name, usage, required), val: defaultVal}
-	flag.StringVar(&iv.val, name, "", usage)
+func NewIntVar(name string, defaultVal int, usage string, required bool) *IntVar {
+	iv := &IntVar{Var: createVar(name, usage, required), val: int64(defaultVal)}
+	flag.Int64Var(&iv.val, name, int64(defaultVal), usage)
 
 	return iv
 }
@@ -24,6 +24,6 @@ func (iv *IntVar) GetVal() (val int, err error) {
 		return
 	}
 
-	val = iv.val
+	val = int(iv.val)
 	return
 }
