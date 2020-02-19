@@ -27,3 +27,12 @@ func (iv *IntVar) GetVal() (val int, err error) {
 	val = int(iv.val)
 	return
 }
+
+func (iv *IntVar) MustGetVal() (val int) {
+	if iv.required && iv.val == 0 {
+		panic(fmt.Sprintf("%s cannot be zero value, %s", iv.name, iv.usage))
+	}
+
+	val = int(iv.val)
+	return
+}

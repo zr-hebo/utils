@@ -21,3 +21,8 @@ func (bv *BoolVar) GetVal() (val bool , err error) {
 	val = bv.val
 	return
 }
+
+func (bv *BoolVar) MustGetVal() (val bool) {
+	val = bv.val
+	return
+}

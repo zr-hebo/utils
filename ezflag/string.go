@@ -27,3 +27,12 @@ func (sv *StringVar) GetVal() (val string , err error) {
 	val = sv.val
 	return
 }
+
+func (sv *StringVar) MustGetVal() (val string) {
+	if sv.required && sv.val == "" {
+		panic(fmt.Sprintf("%s cannot be zero value, %s", sv.name, sv.usage))
+	}
+
+	val = sv.val
+	return
+}
