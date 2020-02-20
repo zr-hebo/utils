@@ -35,62 +35,6 @@ type UnanimityHostWithDomains struct {
 	Domains []string `json:"domains"`
 }
 
-// MysqlDB Mysql主机实例
-type MysqlDB struct {
-	Host
-	UserName       string
-	Passwd         string
-	DatabaseType   string
-	DBName         string
-	ConnectTimeout int
-	QueryTimeout   int
-}
-
-// NewMysqlDB 创建MySQL数据库
-func NewMysqlDB() (md *MysqlDB) {
-	md = new(MysqlDB)
-	md.DatabaseType = dbTypeMysql
-	md.QueryTimeout = 5
-	return
-}
-
-// NewMysqlDBWithAllParam 带参数创建MySQL数据库
-func NewMysqlDBWithAllParam(
-	ip string, port int, userName, passwd, dbName string) (
-	pmd *MysqlDB) {
-	pmd = NewMysqlDB()
-	pmd.IP = ip
-	pmd.Port = port
-	pmd.UserName = userName
-	pmd.Passwd = passwd
-	pmd.DBName = dbName
-
-	return
-}
-
-// GetConnection 获取数据库连接
-func (md *MysqlDB) getConnection() (*sql.DB, error) {
-	connStr := md.fillConnStr()
-
-	stmtDB, err := sql.Open(md.DatabaseType, connStr)
-	if err != nil {
-		if stmtDB != nil {
-			stmtDB.Close()
-		}
-		return nil, err
-	}
-
-	stmtDB.SetMaxOpenConns(0)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-	if err := stmtDB.PingContext(ctx); err != nil {
-		return nil, err
-	}
-
-	return stmtDB, nil
-}
-
 // Field 字段
 type Field struct {
 	Name string
@@ -128,37 +72,72 @@ func newQueryRows() *QueryRows {
 	return queryRows
 }
 
+// MySQL Mysql主机实例
+type MySQL struct {
+	Host
+	UserName       string
+	Passwd         string
+	DatabaseType   string
+	DBName         string
+	ConnectTimeout int
+	QueryTimeout   int
+	stmtDB         *sql.DB
+}
+
+// NewMySQL 创建MySQL数据库
+func NewMySQL(
+	ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
+	mysql = new(MySQL)
+	mysql.DatabaseType = dbTypeMysql
+	mysql.QueryTimeout = 5
+	mysql.IP = ip
+	mysql.Port = port
+	mysql.UserName = userName
+	mysql.Passwd = passwd
+	mysql.DBName = dbName
+
+	db, err := sql.Open(mysql.DatabaseType, mysql.fillConnStr())
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetConnMaxLifetime(time.Second * 30)
+	mysql.stmtDB = db
+	return
+}
+
+// Close 关闭数据库连接
+func (m *MySQL) Close() (err error) {
+	if m.stmtDB != nil {
+		return m.stmtDB.Close()
+	}
+	return
+}
+
+// GetConnection 获取数据库连接
+func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) {
+	return m.stmtDB.Conn(ctx)
+}
+
 // QueryRows 执行MySQL Query语句，返回多条数据
-func (md *MysqlDB) QueryRows(querySQL string) (queryRows *QueryRows, err error) {
+func (m *MySQL) QueryRows(querySQL string) (queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows on %s:%d failed <-- %s", md.IP, md.Port, err.Error())
+			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
 		}
 	}()
 
-	connStr := md.fillConnStr()
-
-	db, err := sql.Open(md.DatabaseType, connStr)
-	if db != nil {
-		defer db.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	session, err := m.OpenSession(ctx)
+	if session != nil {
+		defer session.Close()
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(1)
-	db.SetConnMaxLifetime(time.Second * 30)
-
-	ctx := context.Background()
-	conn, err := db.Conn(ctx)
-	if conn != nil {
-		defer conn.Close()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	rawRows, err := conn.QueryContext(ctx, querySQL)
+	rawRows, err := session.QueryContext(ctx, querySQL)
 	// rawRows, err := db.Query(stmt)
 	if rawRows != nil {
 		defer rawRows.Close()
@@ -296,14 +275,14 @@ func getDataType(dbColType string) (colType string) {
 }
 
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
+func (m *MySQL) QueryRow(stmt string) (row *QueryRow, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := md.QueryRows(stmt)
+	queryRows, err := m.QueryRows(stmt)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -319,12 +298,12 @@ func (md *MysqlDB) QueryRow(stmt string) (row *QueryRow, err error) {
 	return
 }
 
-func (md *MysqlDB) fillConnStr() string {
+func (m *MySQL) fillConnStr() string {
 	dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-		md.UserName, md.Passwd, md.IP, md.Port, md.DBName)
-	if md.ConnectTimeout > 0 {
+		m.UserName, m.Passwd, m.IP, m.Port, m.DBName)
+	if m.ConnectTimeout > 0 {
 		dbServerInfoStr = fmt.Sprintf("%s?timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
-			dbServerInfoStr, md.ConnectTimeout, md.QueryTimeout, md.QueryTimeout)
+			dbServerInfoStr, m.ConnectTimeout, m.QueryTimeout, m.QueryTimeout)
 	}
 
 	return dbServerInfoStr
