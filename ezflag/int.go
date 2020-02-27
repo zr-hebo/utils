@@ -29,8 +29,9 @@ func (iv *IntVar) GetVal() (val int, err error) {
 }
 
 func (iv *IntVar) MustGetVal() (val int) {
-	if iv.required && iv.val == 0 {
-		panic(fmt.Sprintf("%s cannot be zero value, %s", iv.name, iv.usage))
+	val, err := iv.GetVal()
+	if err != nil {
+		panic(err.Error())
 	}
 
 	val = int(iv.val)

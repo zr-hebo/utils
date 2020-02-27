@@ -29,8 +29,9 @@ func (sv *StringVar) GetVal() (val string , err error) {
 }
 
 func (sv *StringVar) MustGetVal() (val string) {
-	if sv.required && sv.val == "" {
-		panic(fmt.Sprintf("%s cannot be zero value, %s", sv.name, sv.usage))
+	val, err := sv.GetVal()
+	if err != nil {
+		panic(err.Error())
 	}
 
 	val = sv.val

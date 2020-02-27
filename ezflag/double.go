@@ -29,8 +29,9 @@ func (dv *Float64Var) GetVal() (val float64, err error) {
 }
 
 func (dv *Float64Var) MustGetVal() (val float64) {
-	if dv.required && dv.val == 0 {
-		panic(fmt.Sprintf("%s cannot be zero value, %s", dv.name, dv.usage))
+	val, err := dv.GetVal()
+	if err != nil {
+		panic(err.Error())
 	}
 
 	val = dv.val
