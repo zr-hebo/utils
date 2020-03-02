@@ -13,7 +13,7 @@ type StringVar struct {
 // NewStringVar build new string var
 func NewStringVar(name, defaultVal, usage string, required bool) *StringVar {
 	sv := &StringVar{Var: createVar(name, usage, required), val: defaultVal}
-	flag.StringVar(&sv.val, name, "", usage)
+	flag.StringVar(&sv.val, name, defaultVal, usage)
 
 	return sv
 }
