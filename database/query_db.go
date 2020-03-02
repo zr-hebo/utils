@@ -309,3 +309,13 @@ func (m *MySQL) fillConnStr() string {
 
 	return dbServerInfoStr
 }
+
+// Execute 执行MySQL dml语句，返回执行结果
+func (m *MySQL) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return m.stmtDB.ExecContext(context.Background(), query, args...)
+}
+
+// ExecContext 执行MySQL dml语句，返回执行结果
+func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return m.stmtDB.ExecContext(ctx, query, args...)
+}
