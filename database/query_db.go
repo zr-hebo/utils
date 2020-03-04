@@ -121,7 +121,7 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 }
 
 // QueryRows 执行MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRows(querySQL string) (queryRows *QueryRows, err error) {
+func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
@@ -138,7 +138,7 @@ func (m *MySQL) QueryRows(querySQL string) (queryRows *QueryRows, err error) {
 		return nil, err
 	}
 
-	rawRows, err := session.QueryContext(ctx, querySQL)
+	rawRows, err := session.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	if rawRows != nil {
 		defer rawRows.Close()
@@ -276,14 +276,14 @@ func getDataType(dbColType string) (colType string) {
 }
 
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRow(stmt string) (row *QueryRow, err error) {
+func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := m.QueryRows(stmt)
+	queryRows, err := m.QueryRows(stmt, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
