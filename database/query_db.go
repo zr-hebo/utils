@@ -172,6 +172,86 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 	return
 }
 
+// QueryRow 执行MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	queryRows, err := m.QueryRows(stmt, args...)
+	if err != nil || queryRows == nil {
+		return
+	}
+
+	if len(queryRows.Records) < 1 {
+		return
+	}
+
+	row = newQueryRow()
+	row.Fields = queryRows.Fields
+	row.Record = queryRows.Records[0]
+
+	return
+}
+
+// BatchQuery 适合返回大量数据的情况
+func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
+	fields []Field, recordChan chan map[string]interface{}, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("batch query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	session, err := m.OpenSession(ctx)
+	if session != nil {
+		defer session.Close()
+	}
+	if err != nil {
+		return
+	}
+
+	rawRows, err := session.QueryContext(ctx, querySQL, args...)
+	// rawRows, err := db.Query(stmt)
+	if rawRows != nil {
+		defer rawRows.Close()
+	}
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields = make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	recordChan = make(chan map[string]interface{}, 10)
+	defer func() {
+		close(recordChan)
+	}()
+
+	for rawRows.Next() {
+		receiver := createReceiver(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		recordChan <- getRecordFromReceiver(receiver, fields)
+	}
+	return
+}
+
 func createReceiver(fields []Field) (receiver []interface{}) {
 	receiver = make([]interface{}, 0, len(fields))
 	for _, field := range fields {
@@ -272,30 +352,6 @@ func getDataType(dbColType string) (colType string) {
 	}
 
 	colType = "string"
-	return
-}
-
-// QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
-		}
-	}()
-
-	queryRows, err := m.QueryRows(stmt, args...)
-	if err != nil || queryRows == nil {
-		return
-	}
-
-	if len(queryRows.Records) < 1 {
-		return
-	}
-
-	row = newQueryRow()
-	row.Fields = queryRows.Fields
-	row.Record = queryRows.Records[0]
-
 	return
 }
 
