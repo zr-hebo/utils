@@ -231,8 +231,8 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
+	recordChan = make(chan map[string]interface{}, 10)
 	go func() {
-		recordChan = make(chan map[string]interface{}, 10)
 		defer func() {
 			close(recordChan)
 			rawRows.Close()
