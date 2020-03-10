@@ -216,16 +216,13 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 	}
 
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
-	// rawRows, err := db.Query(stmt)
-	if rawRows != nil {
-		defer rawRows.Close()
-	}
 	if err != nil {
 		return
 	}
 
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
+		rawRows.Close()
 		return
 	}
 
@@ -234,21 +231,23 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
-	recordChan = make(chan map[string]interface{}, 10)
-	defer func() {
-		close(recordChan)
-	}()
+	go func() {
+		recordChan = make(chan map[string]interface{}, 10)
+		defer func() {
+			close(recordChan)
+			rawRows.Close()
+		}()
 
-	for rawRows.Next() {
-		receiver := createReceiver(fields)
-		err = rawRows.Scan(receiver...)
-		if err != nil {
-			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
-			return
+		for rawRows.Next() {
+			receiver := createReceiver(fields)
+			err = rawRows.Scan(receiver...)
+			if err != nil {
+				panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
+			}
+
+			recordChan <- getRecordFromReceiver(receiver, fields)
 		}
-
-		recordChan <- getRecordFromReceiver(receiver, fields)
-	}
+	}()
 	return
 }
 
