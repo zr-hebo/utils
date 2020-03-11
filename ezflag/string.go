@@ -20,7 +20,7 @@ func NewStringVar(name, defaultVal, usage string, required bool) *StringVar {
 
 func (sv *StringVar) GetVal() (val string , err error) {
 	if sv.required && sv.val == "" {
-		err = fmt.Errorf("%s cannot be zero value, %s", sv.name, sv.usage)
+		err = fmt.Errorf("%s: %s", sv.name, sv.usage)
 		return
 	}
 
