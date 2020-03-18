@@ -208,21 +208,20 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	session, err := m.OpenSession(ctx)
-	if session != nil {
-		defer session.Close()
-	}
 	if err != nil {
 		return
 	}
 
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
 	if err != nil {
+		session.Close()
 		return
 	}
 
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
 		rawRows.Close()
+		session.Close()
 		return
 	}
 
@@ -236,6 +235,7 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 		defer func() {
 			close(recordChan)
 			rawRows.Close()
+			session.Close()
 		}()
 
 		for rawRows.Next() {
