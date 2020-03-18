@@ -81,7 +81,7 @@ type MySQL struct {
 	DatabaseType   string
 	DBName         string
 	ConnectTimeout int
-	QueryTimeout   int
+	QueryTimeout   time.Duration
 	stmtDB         *sql.DB
 }
 
@@ -90,7 +90,7 @@ func NewMySQL(
 	ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
 	mysql = new(MySQL)
 	mysql.DatabaseType = dbTypeMysql
-	mysql.QueryTimeout = 5
+	mysql.QueryTimeout = 30
 	mysql.IP = ip
 	mysql.Port = port
 	mysql.UserName = userName
@@ -205,7 +205,7 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	session, err := m.OpenSession(ctx)
 	if session != nil {
