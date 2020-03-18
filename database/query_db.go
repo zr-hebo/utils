@@ -208,20 +208,28 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	session, err := m.OpenSession(ctx)
+	defer func() {
+		if session != nil {
+			session.Close()
+		}
+	}()
 	if err != nil {
 		return
 	}
 
-	rawRows, err := session.QueryContext(ctx, querySQL, args...)
+	queryFieldSQL := fmt.Sprintf("%s LIMIT 1", querySQL)
+	rawRows, err := session.QueryContext(ctx, queryFieldSQL, args...)
+	defer func() {
+		if rawRows != nil {
+			rawRows.Close()
+		}
+	}()
 	if err != nil {
-		session.Close()
 		return
 	}
 
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
-		rawRows.Close()
-		session.Close()
 		return
 	}
 
@@ -231,24 +239,52 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 	}
 
 	recordChan = make(chan map[string]interface{}, 10)
-	go func() {
-		defer func() {
-			close(recordChan)
-			rawRows.Close()
+	go m.fetchRowsAsync(recordChan, fields, querySQL, args...)
+	return
+}
+
+func (m *MySQL) fetchRowsAsync(
+	recordChan chan map[string]interface{}, fields []Field, querySQL string, args ...interface{}) {
+	var err error
+	defer func() {
+		if err != nil {
+			panic(err.Error())
+		}
+		close(recordChan)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	defer cancel()
+	session, err := m.OpenSession(ctx)
+	defer func() {
+		if session != nil {
 			session.Close()
-		}()
-
-		for rawRows.Next() {
-			receiver := createReceiver(fields)
-			err = rawRows.Scan(receiver...)
-			if err != nil {
-				panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
-			}
-
-			recordChan <- getRecordFromReceiver(receiver, fields)
 		}
 	}()
-	return
+	if err != nil {
+		return
+	}
+
+	rawRows, err := session.QueryContext(ctx, querySQL, args...)
+	defer func() {
+		if rawRows != nil {
+			rawRows.Close()
+		}
+	}()
+	if err != nil {
+		session.Close()
+		return
+	}
+
+	for rawRows.Next() {
+		receiver := createReceiver(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
+		}
+
+		recordChan <- getRecordFromReceiver(receiver, fields)
+	}
 }
 
 func createReceiver(fields []Field) (receiver []interface{}) {
