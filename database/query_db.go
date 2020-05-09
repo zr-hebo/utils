@@ -102,7 +102,7 @@ func NewMySQL(
 		return nil, err
 	}
 
-	db.SetConnMaxLifetime(time.Second * 30)
+	db.SetConnMaxLifetime(-1)
 	mysql.stmtDB = db
 	return
 }
