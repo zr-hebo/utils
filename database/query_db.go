@@ -90,7 +90,7 @@ func NewMySQL(
 	ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
 	mysql = new(MySQL)
 	mysql.DatabaseType = dbTypeMysql
-	mysql.QueryTimeout = 30
+	mysql.QueryTimeout = 3
 	mysql.IP = ip
 	mysql.Port = port
 	mysql.UserName = userName
