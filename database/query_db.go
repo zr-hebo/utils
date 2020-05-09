@@ -107,6 +107,22 @@ func NewMySQL(
 	return
 }
 
+// SetConnMaxLifetime 设置连接超时时间
+func (m *MySQL) SetConnMaxLifetime(d time.Duration) {
+	m.stmtDB.SetConnMaxLifetime(d)
+	return
+}
+
+// SetMaxIdleConns 设置最大空闲连接
+func (m *MySQL) SetMaxIdleConns(n int) {
+	m.stmtDB.SetMaxIdleConns(n)
+}
+
+// SetMaxOpenConns 设置最大连接数
+func (m *MySQL) SetMaxOpenConns(n int) {
+	m.stmtDB.SetMaxOpenConns(n)
+}
+
 // Close 关闭数据库连接
 func (m *MySQL) Close() (err error) {
 	if m.stmtDB != nil {
