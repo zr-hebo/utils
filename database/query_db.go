@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
 	//_ "github.com/go-sql-driver/mysql"
 	"time"
 )
@@ -82,6 +83,7 @@ type MySQL struct {
 	DBName         string
 	ConnectTimeout int
 	QueryTimeout   time.Duration
+	connectionLock sync.Mutex
 	stmtDB         *sql.DB
 }
 
@@ -133,7 +135,10 @@ func (m *MySQL) Close() (err error) {
 
 // GetConnection 获取数据库连接
 func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) {
-	return m.stmtDB.Conn(ctx)
+	m.connectionLock.Lock()
+	session, err = m.stmtDB.Conn(ctx)
+	m.connectionLock.Unlock()
+	return
 }
 
 // QueryRows 执行MySQL Query语句，返回多条数据
