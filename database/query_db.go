@@ -92,7 +92,7 @@ func NewMySQL(
 	ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
 	mysql = new(MySQL)
 	mysql.DatabaseType = dbTypeMysql
-	mysql.QueryTimeout = 3
+	mysql.QueryTimeout = 30*time.Second
 	mysql.IP = ip
 	mysql.Port = port
 	mysql.UserName = userName
@@ -104,7 +104,7 @@ func NewMySQL(
 		return nil, err
 	}
 
-	db.SetConnMaxLifetime(-1)
+	db.SetConnMaxLifetime(time.Minute*120)
 	mysql.stmtDB = db
 	return
 }
@@ -149,7 +149,7 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
 	session, err := m.OpenSession(ctx)
 	if session != nil {
