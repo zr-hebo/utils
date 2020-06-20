@@ -193,6 +193,68 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 	return
 }
 
+
+// QueryRows 执行MySQL Query语句，返回多条数据
+func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
+	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
+	// rawRows, err := db.Query(stmt)
+	if rawRows != nil {
+		defer rawRows.Close()
+	}
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = newQueryRows()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceiver(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+	}
+	return
+}
+
+// QueryRow 执行MySQL Query语句，返回１条或０条数据
+func QueryRowInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (row *QueryRow, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	queryRows, err := QueryRowsInTx(ctx, tx, stmt, args...)
+	if err != nil || queryRows == nil {
+		return
+	}
+
+	if len(queryRows.Records) < 1 {
+		return
+	}
+
+	row = newQueryRow()
+	row.Fields = queryRows.Fields
+	row.Record = queryRows.Records[0]
+
+	return
+}
+
+
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
 	defer func() {
