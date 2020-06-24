@@ -459,6 +459,7 @@ func getDataType(dbColType string) (colType string) {
 		"BOOL":     "bool",
 		"INT":      "int64",
 		"BIGINT":   "int64",
+		"BLOB":     "blob",
 	}
 
 	colType, ok := columnTypeDict[dbColType]
