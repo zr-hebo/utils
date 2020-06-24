@@ -395,7 +395,7 @@ func createReceiver(fields []Field) (receiver []interface{}) {
 				receiver = append(receiver, &val)
 			}
 		default:
-			var val sql.NullString
+			var val sql.RawBytes
 			receiver = append(receiver, &val)
 		}
 	}
@@ -442,11 +442,8 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 				}
 			}
 		default:
-			nullVal := value.(*sql.NullString)
-			record[field.Name] = nil
-			if nullVal.Valid {
-				record[field.Name] = nullVal.String
-			}
+			rawVal := value.(*sql.RawBytes)
+			record[field.Name] = rawVal
 		}
 	}
 	return
