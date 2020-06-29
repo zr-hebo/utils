@@ -3,9 +3,10 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"sync"
-	//_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
 	"time"
 )
 
@@ -449,7 +450,12 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 		case "blob":
 			{
 				rawVal := value.(*sql.RawBytes)
-				record[field.Name] = []byte(*rawVal)
+				haha := []byte(*rawVal)
+				if !(haha[0] == 133 && haha[1] == 248) {
+					fmt.Println(hex.EncodeToString(haha))
+					panic("haha")
+				}
+				record[field.Name] = haha
 			}
 		default:
 			{
