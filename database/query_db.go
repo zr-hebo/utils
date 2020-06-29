@@ -394,8 +394,13 @@ func createReceiver(fields []Field) (receiver []interface{}) {
 				var val sql.NullBool
 				receiver = append(receiver, &val)
 			}
+		case "blob":
+			{
+				var val sql.RawBytes
+				receiver = append(receiver, &val)
+			}
 		default:
-			var val sql.RawBytes
+			var val sql.NullString
 			receiver = append(receiver, &val)
 		}
 	}
@@ -441,9 +446,19 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 					record[field.Name] = nullVal.Bool
 				}
 			}
+		case "blob":
+			{
+				rawVal := value.(*sql.RawBytes)
+				record[field.Name] = []byte(*rawVal)
+			}
 		default:
-			rawVal := value.(*sql.RawBytes)
-			record[field.Name] = rawVal
+			{
+				nullVal := value.(*sql.NullString)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.String
+				}
+			}
 		}
 	}
 	return
