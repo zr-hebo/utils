@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	// _ "github.com/go-sql-driver/mysql"
@@ -182,7 +181,7 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 	queryRows = newQueryRows()
 	queryRows.Fields = fields
 	for rawRows.Next() {
-		receiver := createReceiver(fields)
+		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
 			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
@@ -219,7 +218,7 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 	queryRows = newQueryRows()
 	queryRows.Fields = fields
 	for rawRows.Next() {
-		receiver := createReceiver(fields)
+		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
 			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
@@ -361,7 +360,7 @@ func (m *MySQL) fetchRowsAsync(
 	}
 
 	for rawRows.Next() {
-		receiver := createReceiver(fields)
+		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
 			panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
@@ -371,38 +370,38 @@ func (m *MySQL) fetchRowsAsync(
 	}
 }
 
-func createReceiver(fields []Field) (receiver []interface{}) {
-	receiver = make([]interface{}, 0, len(fields))
+func createReceivers(fields []Field) (receivers []interface{}) {
+	receivers = make([]interface{}, 0, len(fields))
 	for _, field := range fields {
 		switch field.Type {
 		case "string":
 			{
 				var val sql.NullString
-				receiver = append(receiver, &val)
+				receivers = append(receivers, &val)
 			}
 		case "int64":
 			{
 				var val sql.NullInt64
-				receiver = append(receiver, &val)
+				receivers = append(receivers, &val)
 			}
 		case "float64":
 			{
 				var val sql.NullFloat64
-				receiver = append(receiver, &val)
+				receivers = append(receivers, &val)
 			}
 		case "bool":
 			{
 				var val sql.NullBool
-				receiver = append(receiver, &val)
+				receivers = append(receivers, &val)
 			}
 		case "blob":
 			{
 				var val sql.RawBytes
-				receiver = append(receiver, &val)
+				receivers = append(receivers, &val)
 			}
 		default:
 			var val sql.NullString
-			receiver = append(receiver, &val)
+			receivers = append(receivers, &val)
 		}
 	}
 
@@ -410,7 +409,7 @@ func createReceiver(fields []Field) (receiver []interface{}) {
 }
 
 func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[string]interface{}) {
-	record = make(map[string]interface{})
+	record = make(map[string]interface{}, len(fields))
 	for idx := 0; idx < len(fields); idx++ {
 		field := fields[idx]
 		value := receiver[idx]
@@ -450,12 +449,9 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 		case "blob":
 			{
 				rawVal := value.(*sql.RawBytes)
-				haha := []byte(*rawVal)
-				if !(haha[0] == 133 && haha[1] == 248) {
-					fmt.Println(hex.EncodeToString(haha))
-					panic("haha")
-				}
-				record[field.Name] = haha
+				val := make([]byte, len(*rawVal))
+				copy(val, *rawVal)
+				record[field.Name] = val
 			}
 		default:
 			{
