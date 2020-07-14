@@ -109,6 +109,28 @@ func NewMySQL(
 	return
 }
 
+// NewMySQL 创建MySQL数据库
+func NewMySQLWithTimeout(
+	ip string, port int, userName, passwd, dbName string, timeout time.Duration) (mysql *MySQL, err error) {
+	mysql = new(MySQL)
+	mysql.DatabaseType = dbTypeMysql
+	mysql.QueryTimeout = timeout
+	mysql.IP = ip
+	mysql.Port = port
+	mysql.UserName = userName
+	mysql.Passwd = passwd
+	mysql.DBName = dbName
+
+	db, err := sql.Open(mysql.DatabaseType, mysql.fillConnStr())
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetConnMaxLifetime(timeout)
+	mysql.stmtDB = db
+	return
+}
+
 // SetConnMaxLifetime 设置连接超时时间
 func (m *MySQL) SetConnMaxLifetime(d time.Duration) {
 	m.stmtDB.SetConnMaxLifetime(d)
