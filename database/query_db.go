@@ -470,9 +470,13 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 			}
 		case "blob":
 			{
-				rawVal := value.(*sql.RawBytes)
-				val := make([]byte, len(*rawVal))
-				copy(val, *rawVal)
+				var val []byte
+				if value != nil {
+					rawVal := value.(*sql.RawBytes)
+					val = make([]byte, len(*rawVal))
+					copy(val, *rawVal)
+				}
+
 				record[field.Name] = val
 			}
 		default:
