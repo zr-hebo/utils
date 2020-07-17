@@ -381,14 +381,25 @@ func (m *MySQL) fetchRowsAsync(
 		return
 	}
 
-	for rawRows.Next() {
-		receiver := createReceivers(fields)
-		err = rawRows.Scan(receiver...)
-		if err != nil {
-			panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
-		}
+	for {
+		select {
+		case <- ctx.Done():
+			err = fmt.Errorf("async query context canceled <-- %s", ctx.Err().Error())
 
-		recordChan <- getRecordFromReceiver(receiver, fields)
+		default:
+			if rawRows.Next() {
+				receiver := createReceivers(fields)
+				err = rawRows.Scan(receiver...)
+				if err != nil {
+					panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
+				}
+
+				recordChan <- getRecordFromReceiver(receiver, fields)
+
+			} else {
+				return
+			}
+		}
 	}
 }
 
