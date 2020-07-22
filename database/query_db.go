@@ -77,14 +77,15 @@ func newQueryRows() *QueryRows {
 // MySQL Mysql主机实例
 type MySQL struct {
 	Host
-	UserName       string
-	Passwd         string
-	DatabaseType   string
-	DBName         string
-	ConnectTimeout int
-	QueryTimeout   time.Duration
-	connectionLock sync.Mutex
-	stmtDB         *sql.DB
+	UserName        string
+	Passwd          string
+	DatabaseType    string
+	DBName          string
+	MultiStatements bool
+	ConnectTimeout  int
+	QueryTimeout    time.Duration
+	connectionLock  sync.Mutex
+	stmtDB          *sql.DB
 }
 
 // NewMySQL 创建MySQL数据库
@@ -92,20 +93,13 @@ func NewMySQL(
 	ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
 	mysql = new(MySQL)
 	mysql.DatabaseType = dbTypeMysql
-	mysql.QueryTimeout = 30*time.Second
+	mysql.QueryTimeout = 30 * time.Second
 	mysql.IP = ip
 	mysql.Port = port
 	mysql.UserName = userName
 	mysql.Passwd = passwd
 	mysql.DBName = dbName
 
-	db, err := sql.Open(mysql.DatabaseType, mysql.fillConnStr())
-	if err != nil {
-		return nil, err
-	}
-
-	db.SetConnMaxLifetime(time.Minute*120)
-	mysql.stmtDB = db
 	return
 }
 
@@ -121,13 +115,6 @@ func NewMySQLWithTimeout(
 	mysql.Passwd = passwd
 	mysql.DBName = dbName
 
-	db, err := sql.Open(mysql.DatabaseType, mysql.fillConnStr())
-	if err != nil {
-		return nil, err
-	}
-
-	db.SetConnMaxLifetime(timeout)
-	mysql.stmtDB = db
 	return
 }
 
@@ -158,8 +145,19 @@ func (m *MySQL) Close() (err error) {
 // GetConnection 获取数据库连接
 func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) {
 	m.connectionLock.Lock()
+	defer m.connectionLock.Unlock()
+
+	if m.stmtDB == nil {
+		db, err := sql.Open(m.DatabaseType, m.fillConnStr())
+		if err != nil {
+			return nil, err
+		}
+
+		db.SetConnMaxLifetime(m.QueryTimeout)
+		m.stmtDB = db
+	}
+
 	session, err = m.stmtDB.Conn(ctx)
-	m.connectionLock.Unlock()
 	return
 }
 
@@ -214,7 +212,6 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 	}
 	return
 }
-
 
 // QueryRows 执行MySQL Query语句，返回多条数据
 func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
@@ -275,7 +272,6 @@ func QueryRowInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interfac
 
 	return
 }
-
 
 // QueryRow 执行MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
@@ -383,7 +379,7 @@ func (m *MySQL) fetchRowsAsync(
 
 	for {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			err = fmt.Errorf("async query context canceled <-- %s", ctx.Err().Error())
 
 		default:
@@ -526,10 +522,10 @@ func getDataType(dbColType string) (colType string) {
 }
 
 func (m *MySQL) fillConnStr() string {
-	dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-		m.UserName, m.Passwd, m.IP, m.Port, m.DBName)
+	dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=%v",
+		m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements)
 	if m.ConnectTimeout > 0 {
-		dbServerInfoStr = fmt.Sprintf("%s?timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
+		dbServerInfoStr = fmt.Sprintf("%s&timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
 			dbServerInfoStr, m.ConnectTimeout, m.QueryTimeout, m.QueryTimeout)
 	}
 
