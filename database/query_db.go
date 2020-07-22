@@ -84,6 +84,10 @@ type MySQL struct {
 	MultiStatements bool
 	ConnectTimeout  int
 	QueryTimeout    time.Duration
+	connMaxLifetime time.Duration
+	maxIdleConns int
+	maxOpenConns int
+
 	connectionLock  sync.Mutex
 	stmtDB          *sql.DB
 }
@@ -120,18 +124,18 @@ func NewMySQLWithTimeout(
 
 // SetConnMaxLifetime 设置连接超时时间
 func (m *MySQL) SetConnMaxLifetime(d time.Duration) {
-	m.stmtDB.SetConnMaxLifetime(d)
+	m.connMaxLifetime = d
 	return
 }
 
 // SetMaxIdleConns 设置最大空闲连接
 func (m *MySQL) SetMaxIdleConns(n int) {
-	m.stmtDB.SetMaxIdleConns(n)
+	m.maxIdleConns = n
 }
 
 // SetMaxOpenConns 设置最大连接数
 func (m *MySQL) SetMaxOpenConns(n int) {
-	m.stmtDB.SetMaxOpenConns(n)
+	m.maxOpenConns = n
 }
 
 // Close 关闭数据库连接
@@ -154,6 +158,8 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 		}
 
 		db.SetConnMaxLifetime(m.QueryTimeout)
+		db.SetMaxOpenConns(m.maxOpenConns)
+		db.SetMaxIdleConns(m.maxIdleConns)
 		m.stmtDB = db
 	}
 
