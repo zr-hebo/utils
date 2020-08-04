@@ -85,11 +85,11 @@ type MySQL struct {
 	ConnectTimeout  int
 	QueryTimeout    time.Duration
 	connMaxLifetime time.Duration
-	maxIdleConns int
-	maxOpenConns int
+	maxIdleConns    int
+	maxOpenConns    int
 
-	connectionLock  sync.Mutex
-	stmtDB          *sql.DB
+	connectionLock sync.Mutex
+	stmtDB         *sql.DB
 }
 
 // NewMySQL 创建MySQL数据库
@@ -414,9 +414,19 @@ func createReceivers(fields []Field) (receivers []interface{}) {
 				var val sql.NullString
 				receivers = append(receivers, &val)
 			}
+		case "int32":
+			{
+				var val sql.NullInt32
+				receivers = append(receivers, &val)
+			}
 		case "int64":
 			{
 				var val sql.NullInt64
+				receivers = append(receivers, &val)
+			}
+		case "float32":
+			{
+				var val sql.NullFloat64
 				receivers = append(receivers, &val)
 			}
 		case "float64":
@@ -457,6 +467,14 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 					record[field.Name] = nullVal.String
 				}
 			}
+		case "int32":
+			{
+				nullVal := value.(*sql.NullInt32)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = nullVal.Int32
+				}
+			}
 		case "int64":
 			{
 				nullVal := value.(*sql.NullInt64)
@@ -471,6 +489,14 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Float64
+				}
+			}
+		case "float32":
+			{
+				nullVal := value.(*sql.NullFloat64)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					record[field.Name] = float32(nullVal.Float64)
 				}
 			}
 		case "bool":
@@ -511,9 +537,11 @@ func getDataType(dbColType string) (colType string) {
 		"TEXT":     "string",
 		"NVARCHAR": "string",
 		"DATETIME": "string",
-		"DECIMAL":  "float64",
+		"DECIMAL":  "string",
+		"FLOAT":    "float32",
+		"DOUBLE":   "float64",
 		"BOOL":     "bool",
-		"INT":      "int64",
+		"INT":      "int32",
 		"BIGINT":   "int64",
 		"BLOB":     "blob",
 	}
