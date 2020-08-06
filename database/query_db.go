@@ -531,21 +531,21 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 	return
 }
 
-func getDataType(dbColType string) (colType string) {
-	var columnTypeDict = map[string]string{
-		"VARCHAR":  "string",
-		"TEXT":     "string",
-		"NVARCHAR": "string",
-		"DATETIME": "string",
-		"DECIMAL":  "string",
-		"FLOAT":    "float32",
-		"DOUBLE":   "float64",
-		"BOOL":     "bool",
-		"INT":      "int32",
-		"BIGINT":   "int64",
-		"BLOB":     "blob",
-	}
+var columnTypeDict = map[string]string{
+	"VARCHAR":  "string",
+	"TEXT":     "string",
+	"NVARCHAR": "string",
+	"DATETIME": "string",
+	"DECIMAL":  "string",
+	"FLOAT":    "float32",
+	"DOUBLE":   "float64",
+	"BOOL":     "bool",
+	"INT":      "int32",
+	"BIGINT":   "int64",
+	"BLOB":     "blob",
+}
 
+func getDataType(dbColType string) (colType string) {
 	colType, ok := columnTypeDict[dbColType]
 	if ok {
 		return
