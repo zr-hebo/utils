@@ -214,12 +214,10 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 			return
 		}
 
-		if err = rawRows.Err(); err != nil {
-			return
-		}
-
 		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
 	}
+
+	err = rawRows.Err()
 	return
 }
 
@@ -254,12 +252,10 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 			return
 		}
 
-		if err = rawRows.Err(); err != nil {
-			return
-		}
-
 		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
 	}
+
+	err = rawRows.Err()
 	return
 }
 
@@ -402,9 +398,6 @@ func (m *MySQL) fetchRowsAsync(
 				err = rawRows.Scan(receiver...)
 				if err != nil {
 					panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
-				}
-				if err = rawRows.Err(); err != nil {
-					panic(err.Error())
 				}
 
 				recordChan <- getRecordFromReceiver(receiver, fields)
