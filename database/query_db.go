@@ -194,6 +194,10 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 		return
 	}
 
+	if err = rawRows.Err(); err != nil {
+		return
+	}
+
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
 		return
@@ -227,6 +231,10 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 		defer rawRows.Close()
 	}
 	if err != nil {
+		return
+	}
+
+	if err = rawRows.Err(); err != nil {
 		return
 	}
 
@@ -380,6 +388,9 @@ func (m *MySQL) fetchRowsAsync(
 	}()
 	if err != nil {
 		session.Close()
+		return
+	}
+	if err = rawRows.Err(); err != nil {
 		return
 	}
 
