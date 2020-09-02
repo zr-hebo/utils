@@ -194,7 +194,43 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 		return
 	}
 
-	if err = rawRows.Err(); err != nil {
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = newQueryRows()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceivers(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		if err = rawRows.Err(); err != nil {
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+	}
+	return
+}
+
+// QueryRows 执行MySQL Query语句，返回多条数据
+func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
+	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
+	// rawRows, err := db.Query(stmt)
+	if rawRows != nil {
+		defer rawRows.Close()
+	}
+	if err != nil {
 		return
 	}
 
@@ -218,43 +254,7 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 			return
 		}
 
-		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
-	}
-	return
-}
-
-// QueryRows 执行MySQL Query语句，返回多条数据
-func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
-	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
-	// rawRows, err := db.Query(stmt)
-	if rawRows != nil {
-		defer rawRows.Close()
-	}
-	if err != nil {
-		return
-	}
-
-	if err = rawRows.Err(); err != nil {
-		return
-	}
-
-	colTypes, err := rawRows.ColumnTypes()
-	if err != nil {
-		return
-	}
-
-	fields := make([]Field, 0, len(colTypes))
-	for _, colType := range colTypes {
-		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
-	}
-
-	queryRows = newQueryRows()
-	queryRows.Fields = fields
-	for rawRows.Next() {
-		receiver := createReceivers(fields)
-		err = rawRows.Scan(receiver...)
-		if err != nil {
-			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+		if err = rawRows.Err(); err != nil {
 			return
 		}
 
@@ -390,9 +390,6 @@ func (m *MySQL) fetchRowsAsync(
 		session.Close()
 		return
 	}
-	if err = rawRows.Err(); err != nil {
-		return
-	}
 
 	for {
 		select {
@@ -405,6 +402,9 @@ func (m *MySQL) fetchRowsAsync(
 				err = rawRows.Scan(receiver...)
 				if err != nil {
 					panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
+				}
+				if err = rawRows.Err(); err != nil {
+					panic(err.Error())
 				}
 
 				recordChan <- getRecordFromReceiver(receiver, fields)
