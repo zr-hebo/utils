@@ -403,6 +403,10 @@ func (m *MySQL) fetchRowsAsync(
 				recordChan <- getRecordFromReceiver(receiver, fields)
 
 			} else {
+				err = rawRows.Err()
+				if err != nil {
+					panic(fmt.Sprintf("async query failed <-- %s", err.Error()))
+				}
 				return
 			}
 		}
