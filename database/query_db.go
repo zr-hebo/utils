@@ -169,14 +169,20 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 
 // QueryRows 执行MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	defer cancel()
+	return m.QueryRowsWithContext(ctx, querySQL, args...)
+}
+
+// QueryRows 执行MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	queryRows *QueryRows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
-	defer cancel()
 	session, err := m.OpenSession(ctx)
 	if session != nil {
 		defer session.Close()
@@ -186,7 +192,6 @@ func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *Quer
 	}
 
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
-	// rawRows, err := db.Query(stmt)
 	if rawRows != nil {
 		defer rawRows.Close()
 	}
@@ -307,8 +312,41 @@ func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err e
 	return
 }
 
+// QueryRow 执行MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...interface{}) (row *QueryRow, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	queryRows, err := m.QueryRowsWithContext(ctx, stmt, args...)
+	if err != nil || queryRows == nil {
+		return
+	}
+
+	if len(queryRows.Records) < 1 {
+		return
+	}
+
+	row = newQueryRow()
+	row.Fields = queryRows.Fields
+	row.Record = queryRows.Records[0]
+
+	return
+}
+
 // BatchQuery 适合返回大量数据的情况
 func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
+	fields []Field, recordChan chan map[string]interface{}, err error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+	defer cancel()
+	return m.BatchQueryWithContext(ctx, querySQL, args...)
+}
+
+// BatchQuery 适合返回大量数据的情况
+func (m *MySQL) BatchQueryWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	fields []Field, recordChan chan map[string]interface{}, err error) {
 	defer func() {
 		if err != nil {
@@ -316,8 +354,6 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 		}
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
-	defer cancel()
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
@@ -350,11 +386,11 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 	}
 
 	recordChan = make(chan map[string]interface{}, 10)
-	go m.fetchRowsAsync(recordChan, fields, querySQL, args...)
+	go m.fetchRowsAsync(ctx, recordChan, fields, querySQL, args...)
 	return
 }
 
-func (m *MySQL) fetchRowsAsync(
+func (m *MySQL) fetchRowsAsync(ctx context.Context,
 	recordChan chan map[string]interface{}, fields []Field, querySQL string, args ...interface{}) {
 	var err error
 	defer func() {
@@ -364,8 +400,6 @@ func (m *MySQL) fetchRowsAsync(
 		close(recordChan)
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
-	defer cancel()
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
@@ -383,14 +417,14 @@ func (m *MySQL) fetchRowsAsync(
 		}
 	}()
 	if err != nil {
-		session.Close()
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			err = fmt.Errorf("async query context canceled <-- %s", ctx.Err().Error())
+			fmt.Printf("async query context canceled <-- %s\n", ctx.Err().Error())
+			return
 
 		default:
 			if rawRows.Next() {
