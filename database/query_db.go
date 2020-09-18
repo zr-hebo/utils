@@ -366,19 +366,19 @@ func (m *MySQL) BatchQueryWithContext(ctx context.Context, querySQL string, args
 
 	queryFieldSQL := fmt.Sprintf("%s LIMIT 1", querySQL)
 	rawRows, err := session.QueryContext(ctx, queryFieldSQL, args...)
-	defer func() {
+	if err != nil {
 		if rawRows != nil {
 			rawRows.Close()
 		}
-	}()
-	if err != nil {
 		return
 	}
 
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
+		rawRows.Close()
 		return
 	}
+	rawRows.Close()
 
 	fields = make([]Field, 0, len(colTypes))
 	for _, colType := range colTypes {
