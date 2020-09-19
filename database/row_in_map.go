@@ -48,29 +48,55 @@ func (f *Field) FieldType() string {
 	return f.Type
 }
 
-// QueryRow 查询单行数据
-type QueryRow struct {
+// QueryRowInMap 查询单行数据
+type QueryRowInMap struct {
 	Fields []Field
 	Record map[string]interface{}
 }
 
-// QueryRows 查询多行数据
-type QueryRows struct {
+// QueryRowInMap 查询单行数据
+type QueryRow struct {
+	Fields []Field
+	Record []interface{}
+}
+
+// QueryRowsInMap 查询多行数据
+type QueryRowsInMap struct {
 	Fields  []Field
 	Records []map[string]interface{}
 }
 
-func newQueryRow() *QueryRow {
-	queryRow := new(QueryRow)
+// QueryRowsInMap 查询多行数据
+type QueryRows struct {
+	Fields  []Field
+	Records [][]interface{}
+}
+
+func newQueryRowInMap() *QueryRowInMap {
+	queryRow := new(QueryRowInMap)
 	queryRow.Fields = make([]Field, 0)
 	queryRow.Record = make(map[string]interface{})
 	return queryRow
 }
 
+func newQueryRow() *QueryRow {
+	queryRow := new(QueryRow)
+	queryRow.Fields = make([]Field, 0)
+	queryRow.Record = make([]interface{}, 0)
+	return queryRow
+}
+
+func newQueryRowsInMap() *QueryRowsInMap {
+	queryRows := new(QueryRowsInMap)
+	queryRows.Fields = make([]Field, 0)
+	queryRows.Records = make([]map[string]interface{}, 0)
+	return queryRows
+}
+
 func newQueryRows() *QueryRows {
 	queryRows := new(QueryRows)
 	queryRows.Fields = make([]Field, 0)
-	queryRows.Records = make([]map[string]interface{}, 0)
+	queryRows.Records = make([][]interface{}, 0, 8)
 	return queryRows
 }
 
@@ -107,7 +133,7 @@ func NewMySQL(
 	return
 }
 
-// NewMySQL 创建MySQL数据库
+// NewMySQLWithTimeout 创建MySQL数据库
 func NewMySQLWithTimeout(
 	ip string, port int, userName, passwd, dbName string, timeout time.Duration) (mysql *MySQL, err error) {
 	mysql = new(MySQL)
@@ -167,16 +193,16 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	return
 }
 
-// QueryRows 执行MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRows(querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
+// QueryRowsInMap 执行MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *QueryRowsInMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
-	return m.QueryRowsWithContext(ctx, querySQL, args...)
+	return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 }
 
-// QueryRows 执行MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	queryRows *QueryRows, err error) {
+// QueryRowsInMap 执行MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	queryRows *QueryRowsInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
@@ -209,7 +235,7 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
-	queryRows = newQueryRows()
+	queryRows = newQueryRowsInMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
 		receiver := createReceivers(fields)
@@ -219,15 +245,16 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 			return
 		}
 
-		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+		queryRows.Records = append(queryRows.Records, getRecordInMapFromReceiver(receiver, fields))
 	}
 
 	err = rawRows.Err()
 	return
 }
 
-// QueryRows 执行MySQL Query语句，返回多条数据
-func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (queryRows *QueryRows, err error) {
+// QueryRowsWithMapInTx 执行MySQL Query语句，返回多条数据
+func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
+	queryRows *QueryRowsInMap, err error) {
 	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	if rawRows != nil {
@@ -247,7 +274,7 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
-	queryRows = newQueryRows()
+	queryRows = newQueryRowsInMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
 		receiver := createReceivers(fields)
@@ -257,22 +284,23 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 			return
 		}
 
-		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+		queryRows.Records = append(queryRows.Records, getRecordInMapFromReceiver(receiver, fields))
 	}
 
 	err = rawRows.Err()
 	return
 }
 
-// QueryRow 执行MySQL Query语句，返回１条或０条数据
-func QueryRowInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (row *QueryRow, err error) {
+// QueryRowWithMapInTx 执行MySQL Query语句，返回１条或０条数据
+func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (
+	row *QueryRowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := QueryRowsInTx(ctx, tx, stmt, args...)
+	queryRows, err := QueryRowsWithMapInTx(ctx, tx, stmt, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -281,22 +309,22 @@ func QueryRowInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interfac
 		return
 	}
 
-	row = newQueryRow()
+	row = newQueryRowInMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
 
 	return
 }
 
-// QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err error) {
+// QueryRowInMap 执行MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (row *QueryRowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := m.QueryRows(stmt, args...)
+	queryRows, err := m.QueryRowsInMap(stmt, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -305,22 +333,23 @@ func (m *MySQL) QueryRow(stmt string, args ...interface{}) (row *QueryRow, err e
 		return
 	}
 
-	row = newQueryRow()
+	row = newQueryRowInMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
 
 	return
 }
 
-// QueryRow 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...interface{}) (row *QueryRow, err error) {
+// QueryRowInMapWithContext 执行MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, stmt string, args ...interface{}) (
+	row *QueryRowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := m.QueryRowsWithContext(ctx, stmt, args...)
+	queryRows, err := m.QueryRowsInMapWithContext(ctx, stmt, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -329,7 +358,7 @@ func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...in
 		return
 	}
 
-	row = newQueryRow()
+	row = newQueryRowInMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
 
@@ -342,11 +371,11 @@ func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
 
 	ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
 	defer cancel()
-	return m.BatchQueryWithContext(ctx, querySQL, args...)
+	return m.BatchQueryInMapWithContext(ctx, querySQL, args...)
 }
 
-// BatchQuery 适合返回大量数据的情况
-func (m *MySQL) BatchQueryWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+// BatchQueryInMapWithContext 适合返回大量数据的情况
+func (m *MySQL) BatchQueryInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	fields []Field, recordChan chan map[string]interface{}, err error) {
 	defer func() {
 		if err != nil {
@@ -386,11 +415,11 @@ func (m *MySQL) BatchQueryWithContext(ctx context.Context, querySQL string, args
 	}
 
 	recordChan = make(chan map[string]interface{}, 10)
-	go m.fetchRowsAsync(ctx, recordChan, fields, querySQL, args...)
+	go m.fetchRowsInMapAsync(ctx, recordChan, fields, querySQL, args...)
 	return
 }
 
-func (m *MySQL) fetchRowsAsync(ctx context.Context,
+func (m *MySQL) fetchRowsInMapAsync(ctx context.Context,
 	recordChan chan map[string]interface{}, fields []Field, querySQL string, args ...interface{}) {
 	var err error
 	defer func() {
@@ -434,7 +463,7 @@ func (m *MySQL) fetchRowsAsync(ctx context.Context,
 					panic(fmt.Sprintf("scan rows failed <-- %s", err.Error()))
 				}
 
-				recordChan <- getRecordFromReceiver(receiver, fields)
+				recordChan <- getRecordInMapFromReceiver(receiver, fields)
 
 			} else {
 				err = rawRows.Err()
@@ -495,7 +524,7 @@ func createReceivers(fields []Field) (receivers []interface{}) {
 	return
 }
 
-func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[string]interface{}) {
+func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record map[string]interface{}) {
 	record = make(map[string]interface{}, len(fields))
 	for idx := 0; idx < len(fields); idx++ {
 		field := fields[idx]
@@ -552,12 +581,11 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record map[s
 		case "blob":
 			{
 				rawVal := value.(*sql.RawBytes)
+				record[field.Name] = nil
 				if rawVal != nil && *rawVal != nil {
 					val := make([]byte, len(*rawVal))
 					copy(val, *rawVal)
 					record[field.Name] = val
-				} else {
-					record[field.Name] = nil
 				}
 			}
 		default:
