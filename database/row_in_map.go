@@ -167,7 +167,8 @@ func (m *MySQL) SetMaxOpenConns(n int) {
 // Close 关闭数据库连接
 func (m *MySQL) Close() (err error) {
 	if m.stmtDB != nil {
-		return m.stmtDB.Close()
+		err = m.stmtDB.Close()
+		m.stmtDB = nil
 	}
 	return
 }
