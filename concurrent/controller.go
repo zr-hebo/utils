@@ -3,11 +3,13 @@ package concurrent
 import (
     "context"
     "fmt"
+    "sync"
 )
 
 type ConController struct {
     allowSize  int
     runningNum int
+    lock       sync.Mutex
     workerChan chan struct{}
 }
 
@@ -20,12 +22,16 @@ func NewConController(size int) (cc *ConController) {
 
 func (cc *ConController) Acquire() {
     cc.workerChan <- struct{}{}
+    cc.lock.Lock()
     cc.runningNum++
+    cc.lock.Unlock()
 }
 
 func (cc *ConController) Release() {
     <-cc.workerChan
+    cc.lock.Lock()
     cc.runningNum--
+    cc.lock.Unlock()
 }
 
 func (cc *ConController) RunningNum() int {
