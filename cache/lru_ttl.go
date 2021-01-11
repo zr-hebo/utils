@@ -10,26 +10,25 @@ import (
 
 func (r *LRURecord) String() string {
     return fmt.Sprintf(
-        "key:%v, last visit time:%s", r.key,
+        "key:%v, last visit time:%s", r.lruIndex.Value,
         r.lastVisitTime.Format("2006-01-02 15:04:05"))
 }
 
 // LRURecord record
 type LRURecord struct {
-    key  string
-    node *list.Element
-    // val           interface{}
+    value         interface{}
+    lruIndex      *list.Element
     lastVisitTime time.Time
 }
 
 // LRUCache lru cache
 type LRUCache struct {
     // maxNum is the maximum number of cache entries before
-    maxNum           int
-    lock             *sync.RWMutex
-    orderList        *list.List
-    contents map[string]*LRURecord
-    TTL      int
+    maxNum    int
+    lock      *sync.RWMutex
+    orderList *list.List
+    contents  map[string]*LRURecord
+    TTL       int
 }
 
 // NewLRUCache create LRUCache instance
@@ -65,22 +64,21 @@ func (lc *LRUCache) Set(key string, val interface{}) {
     record, ok := lc.contents[key]
     if ok {
         // update value in element
-        record.node.Value = val
-        lc.orderList.MoveToFront(record.node)
+        record.value = val
+        lc.orderList.MoveToFront(record.lruIndex)
 
     } else {
         // add new element
         if lc.orderList.Len() >= lc.maxNum {
-            leastUsedElement := lc.orderList.Back()
-            // TODO
-            delete(lc.contents, key)
-            lc.orderList.Remove(leastUsedElement)
+            leastVisitIdx := lc.orderList.Back()
+            delete(lc.contents, leastVisitIdx.Value.(string))
+            lc.orderList.Remove(leastVisitIdx)
         }
 
-        record = &LRURecord{}
-        record.key = key
-        record.node = lc.orderList.PushFront(key)
-        record.node.Value = val
+        record = &LRURecord{
+            value: val,
+        }
+        record.lruIndex = lc.orderList.PushFront(key)
         lc.contents[key] = record
     }
 
@@ -98,14 +96,14 @@ func (lc *LRUCache) Get(key string) (val interface{}) {
         now := time.Now()
         behindTime := time.Second * time.Duration(lc.TTL)
         if now.After(record.lastVisitTime.Add(behindTime)) {
-            lc.orderList.Remove(record.node)
+            lc.orderList.Remove(record.lruIndex)
             delete(lc.contents, key)
             return nil
         }
 
         // reorder key position
-        lc.orderList.PushFront(key)
-        val = record.node.Value
+        lc.orderList.MoveToFront(record.lruIndex)
+        val = record.value
         record.lastVisitTime = now
         return val
     }
@@ -119,7 +117,7 @@ func (lc *LRUCache) Remove(key string) (val interface{}) {
 
     record, ok := lc.contents[key]
     if ok {
-        lc.orderList.Remove(record.node)
+        lc.orderList.Remove(record.lruIndex)
         delete(lc.contents, key)
     }
     return
