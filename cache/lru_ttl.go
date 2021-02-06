@@ -25,7 +25,7 @@ type LRURecord struct {
 type LRUCache struct {
     // maxNum is the maximum number of cache entries before
     maxNum    int
-    lock      *sync.RWMutex
+    lock      sync.RWMutex
     orderList *list.List
     contents  map[string]*LRURecord
     TTL       int
@@ -39,7 +39,6 @@ func NewLRUCache(num, ttl int) (rc *LRUCache) {
 
     return &LRUCache{
         maxNum:    num,
-        lock:      &sync.RWMutex{},
         orderList: list.New(),
         contents:  make(map[string]*LRURecord),
         TTL:       ttl,
@@ -121,4 +120,13 @@ func (lc *LRUCache) Remove(key string) (val interface{}) {
         delete(lc.contents, key)
     }
     return
+}
+
+// Clean clean all value in cache
+func (lc *LRUCache) Clean() {
+    lc.lock.Lock()
+    defer lc.lock.Unlock()
+
+    lc.orderList = list.New()
+    lc.contents = make(map[string]*LRURecord)
 }
