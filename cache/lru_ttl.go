@@ -135,6 +135,6 @@ func (lc *LRUCache) Clean() {
 func (lc *LRUCache) Size() (size int) {
     lc.lock.RLock()
     size = len(lc.contents)
-    lc.lock.Unlock()
+    lc.lock.RUnlock()
     return
 }
