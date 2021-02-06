@@ -130,3 +130,11 @@ func (lc *LRUCache) Clean() {
     lc.orderList = list.New()
     lc.contents = make(map[string]*LRURecord)
 }
+
+// Size size of cache
+func (lc *LRUCache) Size() (size int) {
+    lc.lock.RLock()
+    size = len(lc.contents)
+    lc.lock.Unlock()
+    return
+}
