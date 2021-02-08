@@ -115,7 +115,7 @@ type MySQL struct {
     maxOpenConns    int
 
     connectionLock sync.Mutex
-    stmtDB         *sql.DB
+    rawDB          *sql.DB
 }
 
 // NewMySQL 创建MySQL数据库
@@ -166,19 +166,19 @@ func (m *MySQL) SetMaxOpenConns(n int) {
 
 // Close 关闭数据库连接
 func (m *MySQL) Close() (err error) {
-    if m.stmtDB != nil {
-        err = m.stmtDB.Close()
-        m.stmtDB = nil
+    if m.rawDB != nil {
+        err = m.rawDB.Close()
+        m.rawDB = nil
     }
     return
 }
 
 // GetConnection 获取数据库连接
-func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) {
+func (m *MySQL) RawDB() (db *sql.DB, err error) {
     m.connectionLock.Lock()
     defer m.connectionLock.Unlock()
 
-    if m.stmtDB == nil {
+    if m.rawDB == nil {
         db, err := sql.Open(m.DatabaseType, m.fillConnStr())
         if err != nil {
             return nil, err
@@ -187,10 +187,21 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
         db.SetConnMaxLifetime(m.QueryTimeout)
         db.SetMaxOpenConns(m.maxOpenConns)
         db.SetMaxIdleConns(m.maxIdleConns)
-        m.stmtDB = db
+        m.rawDB = db
     }
 
-    session, err = m.stmtDB.Conn(ctx)
+    db = m.rawDB
+    return
+}
+
+// GetConnection 获取数据库连接
+func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) {
+    rawDB, err := m.RawDB()
+    if err != nil {
+        return
+    }
+
+    session, err = rawDB.Conn(ctx)
     return
 }
 
