@@ -103,16 +103,18 @@ func newQueryRows() *QueryRows {
 // MySQL Mysql主机实例
 type MySQL struct {
     Host
-    UserName        string
-    Passwd          string
-    DatabaseType    string
-    DBName          string
-    MultiStatements bool
-    ConnectTimeout  int
-    QueryTimeout    time.Duration
-    connMaxLifetime time.Duration
-    maxIdleConns    int
-    maxOpenConns    int
+    UserName          string
+    Passwd            string
+    DatabaseType      string
+    DBName            string
+    MultiStatements   bool
+    ConnectTimeout    int
+    QueryTimeout      time.Duration
+    connMaxLifetime   time.Duration
+    maxIdleConns      int
+    maxOpenConns      int
+    // https://github.com/go-sql-driver/mysql#interpolateparams
+    InterpolateParams bool
 
     connectionLock sync.Mutex
     rawDB          *sql.DB
@@ -638,8 +640,8 @@ func getDataType(dbColType string) (colType string) {
 }
 
 func (m *MySQL) fillConnStr() string {
-    dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=%v",
-        m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements)
+    dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v",
+        m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams)
     if m.ConnectTimeout > 0 {
         dbServerInfoStr = fmt.Sprintf("%s&timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
             dbServerInfoStr, m.ConnectTimeout, m.QueryTimeout, m.QueryTimeout)
