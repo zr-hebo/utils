@@ -16,17 +16,21 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
     }()
 
     session, err := m.OpenSession(ctx)
-    if session != nil {
-        defer session.Close()
-    }
+    defer func() {
+        if session != nil {
+            session.Close()
+        }
+    }()
     if err != nil {
         return nil, err
     }
 
     rawRows, err := session.QueryContext(ctx, querySQL, args...)
-    if rawRows != nil {
-        defer rawRows.Close()
-    }
+    defer func() {
+        if rawRows != nil {
+            rawRows.Close()
+        }
+    }()
     if err != nil {
         return
     }
@@ -94,9 +98,11 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 
     rawRows, err := tx.QueryContext(ctx, querySQL, args...)
     // rawRows, err := db.Query(stmt)
-    if rawRows != nil {
-        defer rawRows.Close()
-    }
+    defer func() {
+        if rawRows != nil {
+            rawRows.Close()
+        }
+    }()
     if err != nil {
         return
     }
