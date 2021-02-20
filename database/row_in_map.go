@@ -109,7 +109,7 @@ type MySQL struct {
     DBName            string
     MultiStatements   bool
     ConnectTimeout    int
-    QueryTimeout      time.Duration
+    QueryTimeout      int
     connMaxLifetime   time.Duration
     maxIdleConns      int
     maxOpenConns      int
@@ -125,7 +125,7 @@ func NewMySQL(
     ip string, port int, userName, passwd, dbName string) (mysql *MySQL, err error) {
     mysql = new(MySQL)
     mysql.DatabaseType = dbTypeMysql
-    mysql.QueryTimeout = 30 * time.Second
+    mysql.QueryTimeout = 30
     mysql.IP = ip
     mysql.Port = port
     mysql.UserName = userName
@@ -137,7 +137,7 @@ func NewMySQL(
 
 // NewMySQLWithTimeout 创建MySQL数据库
 func NewMySQLWithTimeout(
-    ip string, port int, userName, passwd, dbName string, timeout time.Duration) (mysql *MySQL, err error) {
+    ip string, port int, userName, passwd, dbName string, timeout int) (mysql *MySQL, err error) {
     mysql = new(MySQL)
     mysql.DatabaseType = dbTypeMysql
     mysql.QueryTimeout = timeout
@@ -186,7 +186,6 @@ func (m *MySQL) RawDB() (db *sql.DB, err error) {
             return nil, err
         }
 
-        db.SetConnMaxLifetime(m.QueryTimeout)
         db.SetMaxOpenConns(m.maxOpenConns)
         db.SetMaxIdleConns(m.maxIdleConns)
         m.rawDB = db
@@ -209,7 +208,7 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 
 // QueryRowsInMap 执行MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *QueryRowsInMap, err error) {
-    ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+    ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
     defer cancel()
     return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 }
@@ -389,7 +388,7 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, stmt string, args 
 func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
     fields []Field, recordChan chan map[string]interface{}, err error) {
 
-    ctx, cancel := context.WithTimeout(context.Background(), m.QueryTimeout)
+    ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
     defer cancel()
     return m.BatchQueryInMapWithContext(ctx, querySQL, args...)
 }
