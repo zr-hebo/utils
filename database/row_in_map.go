@@ -239,9 +239,6 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
             rawRows.Close()
         }
     }()
-    if rawRows != nil {
-        defer rawRows.Close()
-    }
     if err != nil {
         return
     }
