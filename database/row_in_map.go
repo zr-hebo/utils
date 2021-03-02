@@ -103,16 +103,15 @@ func newQueryRows() *QueryRows {
 // MySQL Mysql主机实例
 type MySQL struct {
     Host
-    UserName          string
-    Passwd            string
-    DatabaseType      string
-    DBName            string
-    MultiStatements   bool
-    ConnectTimeout    int
-    QueryTimeout      int
-    connMaxLifetime   time.Duration
-    maxIdleConns      int
-    maxOpenConns      int
+    UserName        string
+    Passwd          string
+    DatabaseType    string
+    DBName          string
+    MultiStatements bool
+    MaxLifetime     int
+    QueryTimeout    int
+    maxIdleConns    int
+    maxOpenConns    int
     // https://github.com/go-sql-driver/mysql#interpolateparams
     InterpolateParams bool
 
@@ -151,8 +150,8 @@ func NewMySQLWithTimeout(
 }
 
 // SetConnMaxLifetime 设置连接超时时间
-func (m *MySQL) SetConnMaxLifetime(d time.Duration) {
-    m.connMaxLifetime = d
+func (m *MySQL) SetConnMaxLifetime(lifetime int) {
+    m.MaxLifetime = lifetime
     return
 }
 
@@ -186,8 +185,15 @@ func (m *MySQL) RawDB() (db *sql.DB, err error) {
             return nil, err
         }
 
-        db.SetMaxOpenConns(m.maxOpenConns)
-        db.SetMaxIdleConns(m.maxIdleConns)
+        if m.MaxLifetime != 0 {
+            db.SetConnMaxLifetime(time.Second * time.Duration(m.MaxLifetime))
+        }
+        if m.maxOpenConns != 0 {
+            db.SetMaxOpenConns(m.maxOpenConns)
+        }
+        if m.maxIdleConns != 0 {
+            db.SetMaxIdleConns(m.maxIdleConns)
+        }
         m.rawDB = db
     }
 
@@ -647,9 +653,9 @@ func getDataType(dbColType string) (colType string) {
 func (m *MySQL) fillConnStr() string {
     dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v",
         m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams)
-    if m.ConnectTimeout > 0 {
-        dbServerInfoStr = fmt.Sprintf("%s&timeout=%ds&readTimeout=%ds&writeTimeout=%ds",
-            dbServerInfoStr, m.ConnectTimeout, m.QueryTimeout, m.QueryTimeout)
+    if m.QueryTimeout > 0 {
+        dbServerInfoStr = fmt.Sprintf("%s&timeout=3s&readTimeout=%ds&writeTimeout=%ds",
+            dbServerInfoStr, m.QueryTimeout, m.QueryTimeout)
     }
 
     return dbServerInfoStr
