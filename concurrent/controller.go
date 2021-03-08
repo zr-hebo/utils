@@ -4,6 +4,7 @@ import (
     "context"
     "fmt"
     "sync"
+    "time"
 )
 
 type ConController struct {
@@ -38,13 +39,18 @@ func (cc *ConController) RunningNum() int {
     return cc.runningNum
 }
 
-func (cc *ConController) Wait(ctx context.Context) (err error) {
-    for idx := 0; idx < cc.allowSize; idx++ {
+func (cc *ConController) Wait(ctx context.Context) {
+    ticker := time.NewTicker(time.Second)
+    for {
         select {
         case <-ctx.Done():
-            err = fmt.Errorf("concurrent controller cancel wait for context calceled")
+            fmt.Println("concurrent controller cancel wait for context canceled")
             return
-        case cc.workerChan <- struct{}{}:
+
+        case <-ticker.C:
+            if cc.runningNum == 0 {
+                return
+            }
         }
     }
     return
