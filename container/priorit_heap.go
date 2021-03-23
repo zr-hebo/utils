@@ -8,13 +8,15 @@ type ComparableNode interface {
 }
 
 type PriorityHeap struct {
-    nodes []ComparableNode
-    lock  sync.RWMutex
+    nodes     []ComparableNode
+    lock      sync.RWMutex
+    cachedKey map[string]bool
 }
 
 func NewPriorityHeap() (ph *PriorityHeap) {
     return &PriorityHeap{
-        nodes: make([]ComparableNode, 0, 1024),
+        nodes:     make([]ComparableNode, 0, 1024),
+        cachedKey: make(map[string]bool, 1024),
     }
 }
 
@@ -25,8 +27,18 @@ func (self *PriorityHeap) Len() int {
 }
 
 func (self *PriorityHeap) Enqueue(node ComparableNode) {
+    if node == nil {
+        return
+    }
+
     self.lock.Lock()
     defer self.lock.Unlock()
+    nodeKey := node.String()
+    if self.cachedKey[nodeKey] {
+        return
+    }
+
+    self.cachedKey[nodeKey] = true
     self.nodes = append(self.nodes, node)
     pos := len(self.nodes) - 1
     for {
@@ -54,6 +66,10 @@ func (self *PriorityHeap) Dequeue() (minNode ComparableNode) {
         return
     }
 
+    defer func() {
+        nodeKey := minNode.String()
+        delete(self.cachedKey, nodeKey)
+    }()
     minNode = self.nodes[0]
     if len(self.nodes) == 1 {
         self.nodes = self.nodes[1:]
@@ -68,11 +84,11 @@ func (self *PriorityHeap) Dequeue() (minNode ComparableNode) {
     for {
         rootNode := self.nodes[rootPos]
         var leftSubNode, rightSubNode ComparableNode
-        leftSubNodePos := (rootPos+1)*2-1
+        leftSubNodePos := (rootPos+1)*2 - 1
         if leftSubNodePos < nodeNum {
             leftSubNode = self.nodes[leftSubNodePos]
         }
-        rightSubNodePos := (rootPos+1)*2
+        rightSubNodePos := (rootPos + 1) * 2
         if rightSubNodePos < nodeNum {
             rightSubNode = self.nodes[rightSubNodePos]
         }
@@ -83,7 +99,7 @@ func (self *PriorityHeap) Dequeue() (minNode ComparableNode) {
 
         minSubNode := leftSubNode
         minSubNodePos := leftSubNodePos
-        if rightSubNode != nil && rightSubNode.Less(leftSubNode){
+        if rightSubNode != nil && rightSubNode.Less(leftSubNode) {
             minSubNode = rightSubNode
             minSubNodePos = rightSubNodePos
         }
