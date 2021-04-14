@@ -635,6 +635,7 @@ var columnTypeDict = map[string]string{
     "FLOAT":    "float32",
     "DOUBLE":   "float64",
     "BOOL":     "bool",
+    "TINYINT":  "int32",
     "INT":      "int32",
     "BIGINT":   "int64",
     "BLOB":     "blob",
