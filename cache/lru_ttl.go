@@ -123,12 +123,80 @@ func (lc *LRUCache) Remove(key string) (val interface{}) {
 }
 
 // Clean clean all value in cache
-func (lc *LRUCache) Clean() {
+func (lc *LRUCache) Clean() (vals []interface{}) {
+    oldContents := lc.contents
+    oldOrderList := lc.orderList
+    defer func() {
+        vals = make([]interface{}, 0, len(oldContents))
+        head := oldOrderList.Front()
+        for head != nil {
+            record := oldContents[head.Value.(string)]
+            vals = append(vals, record.value)
+            head = head.Next()
+        }
+    }()
+
+    lc.lock.Lock()
+    defer lc.lock.Unlock()
+    lc.orderList = list.New()
+    lc.contents = make(map[string]*LRURecord)
+    return
+}
+
+// Clean clean last N value in cache
+func (lc *LRUCache) CleanLast(num int) (vals []interface{}) {
     lc.lock.Lock()
     defer lc.lock.Unlock()
 
-    lc.orderList = list.New()
-    lc.contents = make(map[string]*LRURecord)
+    totalNum := lc.orderList.Len()
+    beginPos := totalNum - num
+    if beginPos < 0 {
+        beginPos = 0
+    }
+
+    vals = make([]interface{}, 0, beginPos)
+    head := lc.orderList.Front()
+    for head != nil {
+        if beginPos > 0 {
+            beginPos--
+            head = head.Next()
+            continue
+        }
+
+        recordKey := head.Value.(string)
+        record := lc.contents[recordKey]
+        vals = append(vals, record.value)
+
+        delete(lc.contents, recordKey)
+        oldHead := head
+        head = head.Next()
+        lc.orderList.Remove(oldHead)
+    }
+    return
+}
+
+// Clean clean values not change before given time in cache
+func (lc *LRUCache) CleanSince(sinceTime time.Time) (vals []interface{}) {
+    lc.lock.Lock()
+    defer lc.lock.Unlock()
+
+    vals = make([]interface{}, 0, lc.orderList.Len())
+    head := lc.orderList.Front()
+    for head != nil {
+        recordKey := head.Value.(string)
+        record := lc.contents[recordKey]
+        if record.lastVisitTime.After(sinceTime) {
+            head = head.Next()
+            continue
+        }
+
+        vals = append(vals, record.value)
+        delete(lc.contents, recordKey)
+        oldHead := head
+        head = head.Next()
+        lc.orderList.Remove(oldHead)
+    }
+    return
 }
 
 // Size size of cache
