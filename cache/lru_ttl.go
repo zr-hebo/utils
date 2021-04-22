@@ -176,7 +176,7 @@ func (lc *LRUCache) CleanLast(num int) (vals []interface{}) {
 }
 
 // Clean clean values not change before given time in cache
-func (lc *LRUCache) CleanSince(sinceTime time.Time) (vals []interface{}) {
+func (lc *LRUCache) CleanBefore(sinceTime time.Time) (vals []interface{}) {
     lc.lock.Lock()
     defer lc.lock.Unlock()
 
