@@ -57,6 +57,13 @@ func TestCityHashFromString(t *testing.T) {
 			},
 			wantHash: 12016482007678147712,
 		},
+		{
+			name: "six",
+			args: args{
+				val: "",
+			},
+			wantHash: 11160318154034397263,
+		},
 	}
 
 	for _, tt := range tests {

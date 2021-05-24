@@ -11,7 +11,7 @@ func TestJavaHash(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		wantHash int32
+		wantHash int64
 	}{
 		{
 			name:     "empty string",
@@ -21,12 +21,22 @@ func TestJavaHash(t *testing.T) {
 		{
 			name:     "hello world",
 			args:     args{val: "Hello, world!"},
-			wantHash: -1880044555,
+			wantHash: 1880044555,
+		},
+		{
+			name:     "hello kwai",
+			args:     args{val: "Hello, Kwai!"},
+			wantHash: 516701689,
+		},
+		{
+			name:     "laotie, 666",
+			args:     args{val: "laotie, 666"},
+			wantHash: 491186316,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotHash := JavaHashFromString(tt.args.val); gotHash != tt.wantHash {
+			if gotHash := Int32Abs(JavaHashFromString(tt.args.val)); gotHash != tt.wantHash {
 				t.Errorf("JavaHash() = %v, want %v", gotHash, tt.wantHash)
 			}
 		})
