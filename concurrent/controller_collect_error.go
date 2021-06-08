@@ -34,11 +34,13 @@ func (cce *ConControllerWithError) CollectError(err error) {
 		return
 	}
 
+	cce.lock.Lock()
 	if cce.errorCollector == nil {
 		cce.errorCollector = err
 	} else {
 		cce.errorCollector = fmt.Errorf("%s; %s", cce.errorCollector, err.Error())
 	}
+	cce.lock.Unlock()
 }
 
 func (cce *ConControllerWithError) Error() error {
