@@ -41,6 +41,10 @@ func (cce *ConControllerWithError) CollectError(err error) {
 	}
 }
 
+func (cce *ConControllerWithError) Error() error {
+	return cce.errorCollector
+}
+
 func (cce *ConControllerWithError) Release() {
 	<-cce.workerChan
 	cce.lock.Lock()
