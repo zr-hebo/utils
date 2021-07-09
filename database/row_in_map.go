@@ -666,13 +666,13 @@ func getDataType(dbColType string) (colType string) {
 }
 
 func (m *MySQL) fillConnStr() string {
-	dbServerInfoStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v",
-		m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams)
+	dbServerInfoStr := fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v&maxAllowedPacket=%d",
+		m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams, m.MaxAllowedPacket)
 	if m.QueryTimeout > 0 {
 		dbServerInfoStr = fmt.Sprintf("%s&timeout=3s&readTimeout=%ds&writeTimeout=%ds",
 			dbServerInfoStr, m.QueryTimeout, m.QueryTimeout)
 	}
-	dbServerInfoStr = fmt.Sprintf("%s&maxAllowedPacket=%d", dbServerInfoStr, m.MaxAllowedPacket)
 
 	return dbServerInfoStr
 }
