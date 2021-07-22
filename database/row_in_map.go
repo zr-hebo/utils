@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -255,6 +256,7 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 
 	fields := make([]Field, 0, len(colTypes))
 	for _, colType := range colTypes {
+		colType.ScanType()
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
@@ -512,12 +514,12 @@ func createReceivers(fields []Field) (receivers []interface{}) {
 			}
 		case "int32":
 			{
-				var val sql.NullInt32
+				var val sql.NullInt64
 				receivers = append(receivers, &val)
 			}
 		case "int64":
 			{
-				var val sql.NullInt64
+				var val sql.NullString
 				receivers = append(receivers, &val)
 			}
 		case "float32":
@@ -565,18 +567,31 @@ func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record 
 			}
 		case "int32":
 			{
-				nullVal := value.(*sql.NullInt32)
-				record[field.Name] = nil
-				if nullVal.Valid {
-					record[field.Name] = nullVal.Int32
-				}
-			}
-		case "int64":
-			{
 				nullVal := value.(*sql.NullInt64)
 				record[field.Name] = nil
 				if nullVal.Valid {
 					record[field.Name] = nullVal.Int64
+				}
+			}
+		case "int64":
+			{
+				nullVal := value.(*sql.NullString)
+				record[field.Name] = nil
+				if nullVal.Valid {
+					if nullVal.String[0] == '-' {
+						intVal, err := strconv.ParseInt(nullVal.String, 10, 64)
+						if err != nil {
+							panic(fmt.Sprintf("parse int64 value from '%s' failed", nullVal.String))
+						}
+						record[field.Name] = intVal
+
+					} else {
+						uintVal, err := strconv.ParseUint(nullVal.String, 10, 64)
+						if err != nil {
+							panic(fmt.Sprintf("parse uint64 value from '%s' failed", nullVal.String))
+						}
+						record[field.Name] = uintVal
+					}
 				}
 			}
 		case "float64":
