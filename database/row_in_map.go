@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	dbTypeMysql = "mysql"
+	dbTypeMysql       = "mysql"
+	overflowIn64Value = 9223372036854775808
 )
 
 // Host  主机
@@ -232,7 +233,7 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
-			session.Close()
+			_ = session.Close()
 		}
 	}()
 	if err != nil {
@@ -242,7 +243,7 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
 	defer func() {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 	}()
 	if err != nil {
@@ -284,7 +285,7 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 	// rawRows, err := db.Query(stmt)
 	defer func() {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 	}()
 	if err != nil {
@@ -413,7 +414,7 @@ func (m *MySQL) BatchQueryInMapWithContext(ctx context.Context, querySQL string,
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
-			session.Close()
+			_ = session.Close()
 		}
 	}()
 	if err != nil {
@@ -424,17 +425,17 @@ func (m *MySQL) BatchQueryInMapWithContext(ctx context.Context, querySQL string,
 	rawRows, err := session.QueryContext(ctx, queryFieldSQL, args...)
 	if err != nil {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 		return
 	}
 
 	colTypes, err := rawRows.ColumnTypes()
 	if err != nil {
-		rawRows.Close()
+		_ = rawRows.Close()
 		return
 	}
-	rawRows.Close()
+	_ = rawRows.Close()
 
 	fields = make([]Field, 0, len(colTypes))
 	for _, colType := range colTypes {
@@ -459,7 +460,7 @@ func (m *MySQL) fetchRowsInMapAsync(ctx context.Context,
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
-			session.Close()
+			_ = session.Close()
 		}
 	}()
 	if err != nil {
@@ -469,7 +470,7 @@ func (m *MySQL) fetchRowsInMapAsync(ctx context.Context,
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
 	defer func() {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 	}()
 	if err != nil {
@@ -592,7 +593,11 @@ func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record 
 							panic(fmt.Sprintf("parse uint64 value from '%s' failed <-- %s",
 								nullVal.String, err.Error()))
 						}
-						record[field.Name] = uintVal
+						if uintVal < overflowIn64Value {
+							record[field.Name] = int64(uintVal)
+						} else {
+							record[field.Name] = uintVal
+						}
 					}
 				}
 			}
@@ -711,7 +716,7 @@ func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
-			session.Close()
+			_ = session.Close()
 		}
 	}()
 	if err != nil {

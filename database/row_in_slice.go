@@ -19,7 +19,7 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
-			session.Close()
+			_ = session.Close()
 		}
 	}()
 	if err != nil {
@@ -29,7 +29,7 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 	rawRows, err := session.QueryContext(ctx, querySQL, args...)
 	defer func() {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 	}()
 	if err != nil {
@@ -101,7 +101,7 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 	// rawRows, err := db.Query(stmt)
 	defer func() {
 		if rawRows != nil {
-			rawRows.Close()
+			_ = rawRows.Close()
 		}
 	}()
 	if err != nil {
@@ -192,7 +192,11 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record []int
 							panic(fmt.Sprintf("parse uint64 value from '%s' failed <-- %s",
 								nullVal.String, err.Error()))
 						}
-						record[idx] = uintVal
+						if uintVal < 9223372036854775808 {
+							record[idx] = int64(uintVal)
+						} else {
+							record[idx] = uintVal
+						}
 					}
 				}
 			}
