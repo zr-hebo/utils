@@ -581,14 +581,16 @@ func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record 
 					if nullVal.String[0] == '-' {
 						intVal, err := strconv.ParseInt(nullVal.String, 10, 64)
 						if err != nil {
-							panic(fmt.Sprintf("parse int64 value from '%s' failed", nullVal.String))
+							panic(fmt.Sprintf("parse int64 value from '%s' failed <-- %s",
+								nullVal.String, err.Error()))
 						}
 						record[field.Name] = intVal
 
 					} else {
 						uintVal, err := strconv.ParseUint(nullVal.String, 10, 64)
 						if err != nil {
-							panic(fmt.Sprintf("parse uint64 value from '%s' failed", nullVal.String))
+							panic(fmt.Sprintf("parse uint64 value from '%s' failed <-- %s",
+								nullVal.String, err.Error()))
 						}
 						record[field.Name] = uintVal
 					}
