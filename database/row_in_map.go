@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/zr-hebo/utils/container"
 )
 
 const (
@@ -55,6 +57,12 @@ type QueryRowInMap struct {
 	Record map[string]interface{}
 }
 
+// QueryRowInOrderedMap 查询单行数据
+type QueryRowInOrderedMap struct {
+	Fields []Field
+	Record *container.OrderedMap
+}
+
 // QueryRow 查询单行数据
 type QueryRow struct {
 	Fields []Field
@@ -65,6 +73,12 @@ type QueryRow struct {
 type QueryRowsInMap struct {
 	Fields  []Field
 	Records []map[string]interface{}
+}
+
+// QueryRowsInOrderedMap 查询多行数据
+type QueryRowsInOrderedMap struct {
+	Fields  []Field
+	Records []*container.OrderedMap
 }
 
 // QueryRows 查询多行数据
@@ -80,6 +94,13 @@ func newQueryRowInMap() *QueryRowInMap {
 	return queryRow
 }
 
+func newQueryRowInOrderedMap() *QueryRowInOrderedMap {
+	queryRow := new(QueryRowInOrderedMap)
+	queryRow.Fields = make([]Field, 0)
+	queryRow.Record = container.NewOrderedMap()
+	return queryRow
+}
+
 func newQueryRow() *QueryRow {
 	queryRow := new(QueryRow)
 	queryRow.Fields = make([]Field, 0)
@@ -91,6 +112,13 @@ func newQueryRowsInMap() *QueryRowsInMap {
 	queryRows := new(QueryRowsInMap)
 	queryRows.Fields = make([]Field, 0)
 	queryRows.Records = make([]map[string]interface{}, 0)
+	return queryRows
+}
+
+func newQueryRowsInOrderedMap() *QueryRowsInOrderedMap {
+	queryRows := new(QueryRowsInOrderedMap)
+	queryRows.Fields = make([]Field, 0)
+	queryRows.Records = make([]*container.OrderedMap, 0, 8)
 	return queryRows
 }
 
@@ -214,14 +242,22 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	return
 }
 
-// QueryRowsInMap 执行MySQL Query语句，返回多条数据
+// QueryRowsInMap 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *QueryRowsInMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
 	return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 }
 
-// QueryRowsInMapWithContext 执行MySQL Query语句，返回多条数据
+// QueryRowsInOrderedMap 执行 MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
+	queryRows *QueryRowsInOrderedMap, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
+	defer cancel()
+	return m.QueryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+}
+
+// QueryRowsInMapWithContext 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	queryRows *QueryRowsInMap, err error) {
 	defer func() {
@@ -278,7 +314,64 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	return
 }
 
-// QueryRowsWithMapInTx 执行MySQL Query语句，返回多条数据
+// QueryRowsInOrderedMapWithContext 执行 MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	queryRows *QueryRowsInOrderedMap, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+		}
+	}()
+
+	session, err := m.OpenSession(ctx)
+	defer func() {
+		if session != nil {
+			_ = session.Close()
+		}
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	rawRows, err := session.QueryContext(ctx, querySQL, args...)
+	defer func() {
+		if rawRows != nil {
+			_ = rawRows.Close()
+		}
+	}()
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		colType.ScanType()
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = newQueryRowsInOrderedMap()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceivers(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordInOrderedMapFromReceiver(receiver, fields))
+	}
+
+	err = rawRows.Err()
+	return
+}
+
+// QueryRowsWithMapInTx 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
 	queryRows *QueryRowsInMap, err error) {
 	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
@@ -319,7 +412,48 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 	return
 }
 
-// QueryRowWithMapInTx 执行MySQL Query语句，返回１条或０条数据
+// QueryRowsWithOrderedMapInTx 执行 MySQL Query语句，返回多条数据
+func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
+	queryRows *QueryRowsInOrderedMap, err error) {
+	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
+	// rawRows, err := db.Query(stmt)
+	defer func() {
+		if rawRows != nil {
+			_ = rawRows.Close()
+		}
+	}()
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = newQueryRowsInOrderedMap()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceivers(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordInOrderedMapFromReceiver(receiver, fields))
+	}
+
+	err = rawRows.Err()
+	return
+}
+
+// QueryRowWithMapInTx 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (
 	row *QueryRowInMap, err error) {
 	defer func() {
@@ -344,15 +478,16 @@ func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...i
 	return
 }
 
-// QueryRowInMap 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (row *QueryRowInMap, err error) {
+// QueryRowWithOrderedMapInTx 执行 MySQL Query语句，返回１条或０条数据
+func QueryRowWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (
+	row *QueryRowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	queryRows, err := m.QueryRowsInMap(stmt, args...)
+	queryRows, err := QueryRowsWithOrderedMapInTx(ctx, tx, stmt, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -361,15 +496,40 @@ func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (row *QueryRowIn
 		return
 	}
 
-	row = newQueryRowInMap()
+	row = newQueryRowInOrderedMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
-
 	return
 }
 
-// QueryRowInMapWithContext 执行MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, stmt string, args ...interface{}) (
+// QueryRowInMap 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *QueryRowInMap, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
+	defer cancel()
+	return m.QueryRowInMapWithContext(ctx, querySQL, args...)
+}
+
+// QueryRowInOrderedMap 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row *QueryRowInOrderedMap, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
+	defer cancel()
+	return m.QueryRowInOrderedMapWithContext(ctx, querySQL, args...)
+}
+
+// QueryRowInMapWithContext 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	row *QueryRowInMap, err error) {
 	defer func() {
 		if err != nil {
@@ -377,7 +537,7 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, stmt string, args 
 		}
 	}()
 
-	queryRows, err := m.QueryRowsInMapWithContext(ctx, stmt, args...)
+	queryRows, err := m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -393,57 +553,27 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, stmt string, args 
 	return
 }
 
-// BatchQuery 适合返回大量数据的情况
-func (m *MySQL) BatchQuery(querySQL string, args ...interface{}) (
-	fields []Field, recordChan chan map[string]interface{}, err error) {
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
-	defer cancel()
-	return m.BatchQueryInMapWithContext(ctx, querySQL, args...)
-}
-
-// BatchQueryInMapWithContext 适合返回大量数据的情况
-func (m *MySQL) BatchQueryInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	fields []Field, recordChan chan map[string]interface{}, err error) {
+// QueryRowInOrderedMapWithContext 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	row *QueryRowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("batch query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+			err = fmt.Errorf("query row failed <-- %s", err.Error())
 		}
 	}()
 
-	session, err := m.OpenSession(ctx)
-	defer func() {
-		if session != nil {
-			_ = session.Close()
-		}
-	}()
-	if err != nil {
+	resp, err := m.QueryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+	if err != nil || resp == nil {
 		return
 	}
 
-	queryFieldSQL := fmt.Sprintf("%s LIMIT 1", querySQL)
-	rawRows, err := session.QueryContext(ctx, queryFieldSQL, args...)
-	if err != nil {
-		if rawRows != nil {
-			_ = rawRows.Close()
-		}
+	if len(resp.Records) < 1 {
 		return
 	}
 
-	colTypes, err := rawRows.ColumnTypes()
-	if err != nil {
-		_ = rawRows.Close()
-		return
-	}
-	_ = rawRows.Close()
-
-	fields = make([]Field, 0, len(colTypes))
-	for _, colType := range colTypes {
-		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
-	}
-
-	recordChan = make(chan map[string]interface{}, 10)
-	go m.fetchRowsInMapAsync(ctx, recordChan, fields, querySQL, args...)
+	row = newQueryRowInOrderedMap()
+	row.Fields = resp.Fields
+	row.Record = resp.Records[0]
 	return
 }
 
@@ -648,6 +778,104 @@ func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record 
 	return
 }
 
+func getRecordInOrderedMapFromReceiver(receiver []interface{}, fields []Field) (record *container.OrderedMap) {
+	record = container.NewOrderedMapWithSize(len(fields))
+	for idx := 0; idx < len(fields); idx++ {
+		field := fields[idx]
+		value := receiver[idx]
+		switch field.Type {
+		case "string":
+			{
+				nullVal := value.(*sql.NullString)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.String)
+				}
+			}
+		case "int32":
+			{
+				nullVal := value.(*sql.NullInt64)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.Int64)
+				}
+			}
+		case "int64":
+			{
+				nullVal := value.(*sql.NullString)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					if nullVal.String[0] == '-' {
+						intVal, err := strconv.ParseInt(nullVal.String, 10, 64)
+						if err != nil {
+							panic(fmt.Sprintf("parse int64 value from '%s' failed <-- %s",
+								nullVal.String, err.Error()))
+						}
+						record.Set(field.Name, intVal)
+
+					} else {
+						uintVal, err := strconv.ParseUint(nullVal.String, 10, 64)
+						if err != nil {
+							panic(fmt.Sprintf("parse uint64 value from '%s' failed <-- %s",
+								nullVal.String, err.Error()))
+						}
+						if uintVal < overflowIn64Value {
+							record.Set(field.Name, int64(uintVal))
+
+						} else {
+							record.Set(field.Name, uintVal)
+
+						}
+					}
+				}
+			}
+		case "float64":
+			{
+				nullVal := value.(*sql.NullFloat64)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.Float64)
+				}
+			}
+		case "float32":
+			{
+				nullVal := value.(*sql.NullFloat64)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.Float64)
+				}
+			}
+		case "bool":
+			{
+				nullVal := value.(*sql.NullBool)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.Bool)
+				}
+			}
+		case "blob":
+			{
+				rawVal := value.(*sql.RawBytes)
+				record.Set(field.Name, nil)
+				if rawVal != nil && *rawVal != nil {
+					val := make([]byte, len(*rawVal))
+					copy(val, *rawVal)
+					record.Set(field.Name, val)
+				}
+			}
+		default:
+			{
+				nullVal := value.(*sql.NullString)
+				record.Set(field.Name, nil)
+				if nullVal.Valid {
+					record.Set(field.Name, nullVal.String)
+				}
+			}
+		}
+	}
+	return
+}
+
 var columnTypeDict = map[string]string{
 	"CHAR":       "string",
 	"VARCHAR":    "string",
@@ -699,7 +927,7 @@ func (m *MySQL) fillConnStr() string {
 	return dbServerInfoStr
 }
 
-// Exec 执行MySQL dml语句，返回执行结果
+// Exec 执行 MySQL dml语句，返回执行结果
 func (m *MySQL) Exec(query string, args ...interface{}) (sql.Result, error) {
 	session, err := m.OpenSession(context.Background())
 	if session != nil {

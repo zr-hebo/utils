@@ -21,7 +21,14 @@ type OrderedMap struct {
 
 func NewOrderedMap() (sm *OrderedMap) {
 	return &OrderedMap{
-		keyMap:   make(map[string]*list.Element),
+		keyMap:   make(map[string]*list.Element, 16),
+		dataList: list.New(),
+	}
+}
+
+func NewOrderedMapWithSize(size int) (sm *OrderedMap) {
+	return &OrderedMap{
+		keyMap:   make(map[string]*list.Element, size),
 		dataList: list.New(),
 	}
 }
