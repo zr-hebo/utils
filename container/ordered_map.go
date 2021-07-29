@@ -47,6 +47,30 @@ func (sm *OrderedMap) Size() int {
 	return len(sm.keyMap)
 }
 
+func (sm *OrderedMap) Keys() []string {
+	sm.lock.RLock()
+	sm.lock.RUnlock()
+
+	keys := make([]string, 0, len(sm.keyMap))
+	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
+		kvItem := elem.Value.(*kvPairItem)
+		keys = append(keys, kvItem.key)
+	}
+	return keys
+}
+
+func (sm *OrderedMap) Values() []interface{} {
+	sm.lock.RLock()
+	sm.lock.RUnlock()
+
+	vals := make([]interface{}, 0, len(sm.keyMap))
+	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
+		kvItem := elem.Value.(*kvPairItem)
+		vals = append(vals, kvItem.val)
+	}
+	return vals
+}
+
 func (sm *OrderedMap) Get(key string) (val interface{}, ok bool) {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
