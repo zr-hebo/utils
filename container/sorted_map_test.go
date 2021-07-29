@@ -13,6 +13,8 @@ func TestSortedMap(t *testing.T) {
 	for _, val := range vals {
 		sm.Set(fmt.Sprintf("key_%v", val), val)
 	}
+	sm.Set("string_key", "MR'Wang")
+	sm.Set("key with\"", "MR\"Wang")
 	t.Log("set to SortedMap OK")
 
 	jsonVal, err := json.Marshal(sm)
@@ -57,5 +59,11 @@ func TestSortedMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	t.Log(string(jsonVal))
+
+	receiver := make(map[string]interface{})
+	err = json.Unmarshal(jsonVal, &receiver)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	t.Logf("%#v", receiver)
 }
