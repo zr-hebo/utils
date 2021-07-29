@@ -8,25 +8,25 @@ import (
 	"sync"
 )
 
-type KVItem struct {
+type kvPairItem struct {
 	key string
 	val interface{}
 }
 
-type SortedMap struct {
+type OrderedMap struct {
 	lock     sync.RWMutex
 	keyMap   map[string]*list.Element
 	dataList *list.List
 }
 
-func NewSortedMap() (sm *SortedMap) {
-	return &SortedMap{
+func NewOrderedMap() (sm *OrderedMap) {
+	return &OrderedMap{
 		keyMap:   make(map[string]*list.Element),
 		dataList: list.New(),
 	}
 }
 
-func (sm *SortedMap) Exist(key string) (ok bool) {
+func (sm *OrderedMap) Exist(key string) (ok bool) {
 	sm.lock.RLock()
 	sm.lock.RUnlock()
 
@@ -34,13 +34,13 @@ func (sm *SortedMap) Exist(key string) (ok bool) {
 	return
 }
 
-func (sm *SortedMap) Size() int {
+func (sm *OrderedMap) Size() int {
 	sm.lock.RLock()
 	sm.lock.RUnlock()
 	return len(sm.keyMap)
 }
 
-func (sm *SortedMap) Get(key string) (val interface{}, ok bool) {
+func (sm *OrderedMap) Get(key string) (val interface{}, ok bool) {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
@@ -50,24 +50,24 @@ func (sm *SortedMap) Get(key string) (val interface{}, ok bool) {
 	}
 
 	ok = true
-	kvItem := elem.Value.(*KVItem)
+	kvItem := elem.Value.(*kvPairItem)
 	val = kvItem.val
 	return
 }
 
-func (sm *SortedMap) Set(key string, val interface{}) {
+func (sm *OrderedMap) Set(key string, val interface{}) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	var kvItem *KVItem
+	var kvItem *kvPairItem
 	elem := sm.keyMap[key]
 	if elem != nil {
-		kvItem = elem.Value.(*KVItem)
+		kvItem = elem.Value.(*kvPairItem)
 		kvItem.val = val
 		return
 	}
 
-	kvItem = &KVItem{
+	kvItem = &kvPairItem{
 		key: key,
 		val: val,
 	}
@@ -76,7 +76,7 @@ func (sm *SortedMap) Set(key string, val interface{}) {
 	return
 }
 
-func (sm *SortedMap) Remove(key string) (val interface{}) {
+func (sm *OrderedMap) Remove(key string) (val interface{}) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
@@ -86,17 +86,17 @@ func (sm *SortedMap) Remove(key string) (val interface{}) {
 	}
 
 	delete(sm.keyMap, key)
-	kvItem := sm.dataList.Remove(elem).(*KVItem)
+	kvItem := sm.dataList.Remove(elem).(*kvPairItem)
 	val = kvItem.val
 	return
 }
 
-func (sm *SortedMap) Walk(visit func(key string, val interface{}) (breakFor bool, err error)) (err error) {
+func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor bool, err error)) (err error) {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
-		kvItem := elem.Value.(*KVItem)
+		kvItem := elem.Value.(*kvPairItem)
 		var breakFor bool
 		breakFor, err = visit(kvItem.key, kvItem.val)
 		if err != nil {
@@ -110,7 +110,7 @@ func (sm *SortedMap) Walk(visit func(key string, val interface{}) (breakFor bool
 	return
 }
 
-func (sm *SortedMap) MarshalJSON() ([]byte, error) {
+func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 	sm.lock.RLock()
 	sm.lock.RUnlock()
 
@@ -119,7 +119,7 @@ func (sm *SortedMap) MarshalJSON() ([]byte, error) {
 	sep := []byte{}
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
 		buf.Write(sep)
-		kvItem := elem.Value.(*KVItem)
+		kvItem := elem.Value.(*kvPairItem)
 		buf.WriteString(strconv.Quote(kvItem.key))
 		buf.WriteByte(':')
 		valInBytes, err := json.Marshal(kvItem.val)
