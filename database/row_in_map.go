@@ -139,6 +139,7 @@ type MySQL struct {
 	MultiStatements  bool
 	MaxLifetime      int
 	QueryTimeout     int
+	UseSSL           bool
 	MaxAllowedPacket int
 	maxIdleConns     int
 	maxOpenConns     int
@@ -922,6 +923,9 @@ func (m *MySQL) fillConnStr() string {
 	if m.QueryTimeout > 0 {
 		dbServerInfoStr = fmt.Sprintf("%s&timeout=3s&readTimeout=%ds&writeTimeout=%ds",
 			dbServerInfoStr, m.QueryTimeout, m.QueryTimeout)
+	}
+	if m.UseSSL {
+		dbServerInfoStr = fmt.Sprintf("%s&tls=skip-verify", dbServerInfoStr)
 	}
 
 	return dbServerInfoStr
