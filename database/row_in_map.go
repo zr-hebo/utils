@@ -145,6 +145,8 @@ type MySQL struct {
 	maxOpenConns     int
 	// https://github.com/go-sql-driver/mysql#interpolateparams
 	InterpolateParams bool
+	// https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
+	IsolationLevel string
 
 	connectionLock sync.Mutex
 	rawDB          *sql.DB
@@ -933,6 +935,9 @@ func (m *MySQL) fillConnStr() string {
 	}
 	if m.UseSSL {
 		dbServerInfoStr = fmt.Sprintf("%s&tls=skip-verify", dbServerInfoStr)
+	}
+	if m.IsolationLevel != "" {
+		dbServerInfoStr = fmt.Sprintf("%s&tx_isolation=%s", dbServerInfoStr, m.IsolationLevel)
 	}
 
 	return dbServerInfoStr
