@@ -669,6 +669,11 @@ func createReceivers(fields []Field) (receivers []interface{}) {
 				var val sql.NullBool
 				receivers = append(receivers, &val)
 			}
+		case "binary":
+			{
+				var val sql.RawBytes
+				receivers = append(receivers, &val)
+			}
 		case "blob":
 			{
 				var val sql.RawBytes
@@ -896,6 +901,8 @@ var columnTypeDict = map[string]string{
 	"INT":        "int32",
 	"INTEGER":    "int32",
 	"BIGINT":     "int64",
+	"BINARY":     "binary",
+	"VARBINARY":  "blob",
 	"BLOB":       "blob",
 	"TINYBLOB":   "blob",
 	"MEDIUMBLOB": "blob",
