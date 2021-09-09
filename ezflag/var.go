@@ -74,6 +74,8 @@ func getKeyFromFlag(flag string) string {
 }
 
 func Parse(reservedKeys []string) error {
+	continueCommandLine.Usage = NoOperationUsage
+
 	reservedArgs := make([]string, 0, len(reservedKeys))
 	userArgs := make([]string, 0, len(os.Args[1:]))
 	reservedKeyInMap := make(map[string]bool)
@@ -89,5 +91,17 @@ func Parse(reservedKeys []string) error {
 	}
 	os.Args = append([]string{os.Args[0]}, reservedArgs...)
 	flag.Parse()
-	return continueCommandLine.Parse(userArgs)
+
+	errMsgs := make([]string, 0, 4)
+	for _, userArg := range userArgs {
+		oneErr := continueCommandLine.Parse([]string{userArg})
+		errMsgs = append(errMsgs, oneErr.Error())
+	}
+	if len(errMsgs) > 0 {
+		return fmt.Errorf(strings.Join(errMsgs, "; "))
+	}
+	return nil
+}
+
+func NoOperationUsage() {
 }
