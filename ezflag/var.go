@@ -95,7 +95,9 @@ func Parse(reservedKeys []string) error {
 	errMsgs := make([]string, 0, 4)
 	for _, userArg := range userArgs {
 		oneErr := continueCommandLine.Parse([]string{userArg})
-		errMsgs = append(errMsgs, oneErr.Error())
+		if oneErr != nil {
+			errMsgs = append(errMsgs, oneErr.Error())
+		}
 	}
 	if len(errMsgs) > 0 {
 		return fmt.Errorf(strings.Join(errMsgs, "; "))
