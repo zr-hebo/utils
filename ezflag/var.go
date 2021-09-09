@@ -1,8 +1,10 @@
 package ezflag
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 var (
@@ -66,6 +68,26 @@ func PrintAllUsage() {
 	}
 }
 
-func Parse() error {
-	return continueCommandLine.Parse(os.Args[1:])
+func getKeyFromFlag(flag string) string {
+	fields := strings.SplitAfterN(flag, "=", 2)
+	return strings.TrimLeft(fields[0], "-")
+}
+
+func Parse(reservedKeys []string) error {
+	reservedArgs := make([]string, 0, len(reservedKeys))
+	userArgs := make([]string, 0, len(os.Args[1:]))
+	reservedKeyInMap := make(map[string]bool)
+	for _, key := range reservedKeys {
+		reservedKeyInMap[key] = true
+	}
+	for _, arg := range os.Args[1:] {
+		if reservedKeyInMap[getKeyFromFlag(arg)] {
+			reservedArgs = append(reservedArgs, arg)
+		} else {
+			userArgs = append(userArgs, arg)
+		}
+	}
+	os.Args = append([]string{os.Args[0]}, reservedArgs...)
+	flag.Parse()
+	return continueCommandLine.Parse(userArgs)
 }
