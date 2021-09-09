@@ -3,10 +3,11 @@ package ezflag
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
 var (
-	allVariables  = make([]Vari, 0, 8)
+	allVariables = make([]Vari, 0, 8)
 )
 
 type Vari interface {
@@ -40,7 +41,7 @@ func (v *Var) Required() bool {
 }
 
 // PrintAllUsage print all flag usage
-func PrintAllUsage()  {
+func PrintAllUsage() {
 	requiredVars := make([]Vari, 0, len(allVariables))
 	optionVars := make([]Vari, 0, len(allVariables))
 	for _, v := range allVariables {
@@ -66,6 +67,7 @@ func PrintAllUsage()  {
 	}
 }
 
-func Parse()  {
-	flag.Parse()
+func Parse() error {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	return flag.CommandLine.Parse(os.Args[1:])
 }
