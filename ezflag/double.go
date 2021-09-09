@@ -1,7 +1,6 @@
 package ezflag
 
 import (
-	"flag"
 	"fmt"
 )
 
@@ -13,7 +12,7 @@ type Float64Var struct {
 // NewFloat64Var build new int var
 func NewFloat64Var(name string, defaultVal float64, usage string, required bool) *Float64Var {
 	dv := &Float64Var{Var: createVar(name, usage, required), val: defaultVal}
-	flag.Float64Var(&dv.val, name, defaultVal, usage)
+	continueCommandLine.Float64Var(&dv.val, name, defaultVal, usage)
 
 	return dv
 }

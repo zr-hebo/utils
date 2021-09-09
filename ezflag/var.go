@@ -1,7 +1,6 @@
 package ezflag
 
 import (
-	"flag"
 	"fmt"
 	"os"
 )
@@ -68,6 +67,5 @@ func PrintAllUsage() {
 }
 
 func Parse() error {
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	return flag.CommandLine.Parse(os.Args[1:])
+	return continueCommandLine.Parse(os.Args[1:])
 }

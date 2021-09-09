@@ -1,7 +1,6 @@
 package ezflag
 
 import (
-	"flag"
 	"fmt"
 )
 
@@ -13,7 +12,7 @@ type IntVar struct {
 // NewIntVar build new int var
 func NewIntVar(name string, defaultVal int, usage string, required bool) *IntVar {
 	iv := &IntVar{Var: createVar(name, usage, required), val: int64(defaultVal)}
-	flag.Int64Var(&iv.val, name, int64(defaultVal), usage)
+	continueCommandLine.Int64Var(&iv.val, name, int64(defaultVal), usage)
 
 	return iv
 }
