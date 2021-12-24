@@ -138,6 +138,7 @@ type MySQL struct {
 	DBName           string
 	MultiStatements  bool
 	MaxLifetime      int
+	MaxIdleTime      int
 	QueryTimeout     int
 	UseSSL           bool
 	MaxAllowedPacket int
@@ -213,13 +214,17 @@ func (m *MySQL) RawDB() (db *sql.DB, err error) {
 	defer m.connectionLock.Unlock()
 
 	if m.rawDB == nil {
-		conn, err := sql.Open(m.DatabaseType, m.fillConnStr())
+		var conn *sql.DB
+		conn, err = sql.Open(m.DatabaseType, m.fillConnStr())
 		if err != nil {
 			return nil, err
 		}
 
 		if m.MaxLifetime != 0 {
 			conn.SetConnMaxLifetime(time.Second * time.Duration(m.MaxLifetime))
+		}
+		if m.MaxIdleTime != 0 {
+			conn.SetConnMaxIdleTime(time.Second * time.Duration(m.MaxIdleTime))
 		}
 		if m.maxOpenConns != 0 {
 			conn.SetMaxOpenConns(m.maxOpenConns)
