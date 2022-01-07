@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
+	"reflect"
 	"strconv"
 	"sync"
 )
@@ -162,4 +163,31 @@ func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 	}
 	buf.WriteByte('}')
 	return buf.Bytes(), nil
+}
+
+func DiffOrderedMap(from, to *OrderedMap) (fromDiff, toDiff *OrderedMap) {
+	fromDiff = NewOrderedMap()
+	toDiff = NewOrderedMap()
+	from.Walk(func(key string, fromVal interface{}) (breakFor bool, err error) {
+		toVal, ok := to.Get(key)
+		if !ok {
+			fromDiff.Set(key, fromVal)
+			return
+		}
+
+		if !reflect.DeepEqual(fromVal, toVal) {
+			fromDiff.Set(key, fromVal)
+			toDiff.Set(key, toVal)
+		}
+		return
+	})
+
+	to.Walk(func(key string, toVal interface{}) (breakFor bool, err error) {
+		_, ok := from.Get(key)
+		if !ok {
+			toDiff.Set(key, toVal)
+		}
+		return
+	})
+	return
 }
