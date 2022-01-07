@@ -178,6 +178,15 @@ func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 }
 
 func DiffOrderedMap(from, to *OrderedMap) (fromDiff, toDiff *OrderedMap) {
+	if to == nil {
+		fromDiff = from
+		return
+	}
+	if from == nil {
+		toDiff = to
+		return
+	}
+	
 	fromDiff = NewOrderedMap()
 	toDiff = NewOrderedMap()
 	from.Walk(func(key string, fromVal interface{}) (breakFor bool, err error) {
