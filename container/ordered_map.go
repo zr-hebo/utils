@@ -144,7 +144,7 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 
 func (sm *OrderedMap) String() string {
 	if sm == nil {
-		return "Nil"
+		return "NULL"
 	}
 
 	val, err := sm.MarshalJSON()
@@ -186,7 +186,7 @@ func DiffOrderedMap(from, to *OrderedMap) (fromDiff, toDiff *OrderedMap) {
 		toDiff = to
 		return
 	}
-	
+
 	fromDiff = NewOrderedMap()
 	toDiff = NewOrderedMap()
 	from.Walk(func(key string, fromVal interface{}) (breakFor bool, err error) {
