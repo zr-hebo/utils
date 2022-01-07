@@ -142,6 +142,18 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 	return
 }
 
+func (sm *OrderedMap) String() string {
+	if sm == nil {
+		return "Nil"
+	}
+
+	val, err := sm.MarshalJSON()
+	if err != nil {
+		return err.Error()
+	}
+	return string(val)
+}
+
 func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 	sm.lock.RLock()
 	sm.lock.RUnlock()
