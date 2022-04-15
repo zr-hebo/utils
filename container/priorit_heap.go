@@ -66,11 +66,9 @@ func (self *PriorityHeap) Dequeue() (minNode ComparableNode) {
 		return
 	}
 
-	nodeNum := len(self.nodes)
 	defer func() {
 		nodeKey := minNode.String()
 		delete(self.cachedKey, nodeKey)
-		nodeNum--
 	}()
 	minNode = self.nodes[0]
 	if len(self.nodes) == 1 {
@@ -78,8 +76,10 @@ func (self *PriorityHeap) Dequeue() (minNode ComparableNode) {
 		return
 	}
 
+	nodeNum := len(self.nodes)
 	self.nodes[0] = self.nodes[nodeNum-1]
 	self.nodes = self.nodes[:nodeNum-1]
+	nodeNum--
 	rootPos := 0
 	for {
 		rootNode := self.nodes[rootPos]
