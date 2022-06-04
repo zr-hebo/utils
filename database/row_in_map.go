@@ -51,79 +51,79 @@ func (f *Field) FieldType() string {
 	return f.Type
 }
 
-// QueryRowInMap 查询单行数据
-type QueryRowInMap struct {
+// RowInMap 查询单行数据
+type RowInMap struct {
 	Fields []Field
 	Record map[string]interface{}
 }
 
-// QueryRowInOrderedMap 查询单行数据
-type QueryRowInOrderedMap struct {
+// RowInOrderedMap 查询单行数据
+type RowInOrderedMap struct {
 	Fields []Field
 	Record *container.OrderedMap
 }
 
-// QueryRow 查询单行数据
-type QueryRow struct {
+// Row 查询单行数据
+type Row struct {
 	Fields []Field
 	Record []interface{}
 }
 
-// QueryRowsInMap 查询多行数据
-type QueryRowsInMap struct {
+// RowsInMap 查询多行数据
+type RowsInMap struct {
 	Fields  []Field
 	Records []map[string]interface{}
 }
 
-// QueryRowsInOrderedMap 查询多行数据
-type QueryRowsInOrderedMap struct {
+// RowsInOrderedMap 查询多行数据
+type RowsInOrderedMap struct {
 	Fields  []Field
 	Records []*container.OrderedMap
 }
 
-// QueryRows 查询多行数据
-type QueryRows struct {
+// Rows 查询多行数据
+type Rows struct {
 	Fields  []Field
 	Records [][]interface{}
 }
 
-func newQueryRowInMap() *QueryRowInMap {
-	queryRow := new(QueryRowInMap)
+func newQueryRowInMap() *RowInMap {
+	queryRow := new(RowInMap)
 	queryRow.Fields = make([]Field, 0)
 	queryRow.Record = make(map[string]interface{})
 	return queryRow
 }
 
-func newQueryRowInOrderedMap() *QueryRowInOrderedMap {
-	queryRow := new(QueryRowInOrderedMap)
+func newQueryRowInOrderedMap() *RowInOrderedMap {
+	queryRow := new(RowInOrderedMap)
 	queryRow.Fields = make([]Field, 0)
 	queryRow.Record = container.NewOrderedMap()
 	return queryRow
 }
 
-func newQueryRow() *QueryRow {
-	queryRow := new(QueryRow)
+func newQueryRow() *Row {
+	queryRow := new(Row)
 	queryRow.Fields = make([]Field, 0)
 	queryRow.Record = make([]interface{}, 0)
 	return queryRow
 }
 
-func newQueryRowsInMap() *QueryRowsInMap {
-	queryRows := new(QueryRowsInMap)
+func newQueryRowsInMap() *RowsInMap {
+	queryRows := new(RowsInMap)
 	queryRows.Fields = make([]Field, 0)
 	queryRows.Records = make([]map[string]interface{}, 0)
 	return queryRows
 }
 
-func newQueryRowsInOrderedMap() *QueryRowsInOrderedMap {
-	queryRows := new(QueryRowsInOrderedMap)
+func newQueryRowsInOrderedMap() *RowsInOrderedMap {
+	queryRows := new(RowsInOrderedMap)
 	queryRows.Fields = make([]Field, 0)
 	queryRows.Records = make([]*container.OrderedMap, 0, 8)
 	return queryRows
 }
 
-func newQueryRows() *QueryRows {
-	queryRows := new(QueryRows)
+func newQueryRows() *Rows {
+	queryRows := new(Rows)
 	queryRows.Fields = make([]Field, 0)
 	queryRows.Records = make([][]interface{}, 0, 8)
 	return queryRows
@@ -250,16 +250,16 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	return
 }
 
-// QueryRowsInMap 执行 MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *QueryRowsInMap, err error) {
+// RowsInMap 执行 MySQL Query语句，返回多条数据
+func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *RowsInMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
 	return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 }
 
-// QueryRowsInOrderedMap 执行 MySQL Query语句，返回多条数据
+// RowsInOrderedMap 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInOrderedMap, err error) {
+	queryRows *RowsInOrderedMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
 	return m.QueryRowsInOrderedMapWithContext(ctx, querySQL, args...)
@@ -267,7 +267,7 @@ func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
 
 // QueryRowsInMapWithContext 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInMap, err error) {
+	queryRows *RowsInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
@@ -290,7 +290,7 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 
 // QueryRowsInOrderedMapWithContext 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInOrderedMap, err error) {
+	queryRows *RowsInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
@@ -313,7 +313,7 @@ func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL s
 
 // QueryRowsWithMap 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInMap, err error) {
+	queryRows *RowsInMap, err error) {
 	rawRows, err := conn.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	defer func() {
@@ -354,7 +354,7 @@ func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args
 
 // QueryRowsWithMapInTx 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInMap, err error) {
+	queryRows *RowsInMap, err error) {
 	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	defer func() {
@@ -395,7 +395,7 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 
 // QueryRowsWithOrderedMap 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInOrderedMap, err error) {
+	queryRows *RowsInOrderedMap, err error) {
 	rawRows, err := conn.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	defer func() {
@@ -436,7 +436,7 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 
 // QueryRowsWithOrderedMapInTx 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
-	queryRows *QueryRowsInOrderedMap, err error) {
+	queryRows *RowsInOrderedMap, err error) {
 	rawRows, err := tx.QueryContext(ctx, querySQL, args...)
 	// rawRows, err := db.Query(stmt)
 	defer func() {
@@ -477,7 +477,7 @@ func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL strin
 
 // QueryRowWithMap 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...interface{}) (
-	row *QueryRowInMap, err error) {
+	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -501,7 +501,7 @@ func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...i
 
 // QueryRowWithMapInTx 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (
-	row *QueryRowInMap, err error) {
+	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -526,7 +526,7 @@ func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...i
 
 // QueryRowWithOrderedMap 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, args ...interface{}) (
-	row *QueryRowInOrderedMap, err error) {
+	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -550,7 +550,7 @@ func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, ar
 
 // QueryRowWithOrderedMapInTx 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...interface{}) (
-	row *QueryRowInOrderedMap, err error) {
+	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -572,8 +572,8 @@ func QueryRowWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, stmt string, ar
 	return
 }
 
-// QueryRowInMap 执行 MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *QueryRowInMap, err error) {
+// RowInMap 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -585,8 +585,8 @@ func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *QueryR
 	return m.QueryRowInMapWithContext(ctx, querySQL, args...)
 }
 
-// QueryRowInOrderedMap 执行 MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row *QueryRowInOrderedMap, err error) {
+// RowInOrderedMap 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -600,7 +600,7 @@ func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row 
 
 // QueryRowInMapWithContext 执行 MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	row *QueryRowInMap, err error) {
+	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -625,7 +625,7 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, a
 
 // QueryRowInOrderedMapWithContext 执行 MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	row *QueryRowInOrderedMap, err error) {
+	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())

@@ -9,7 +9,7 @@ import (
 
 // QueryRowsWithContext 执行MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args ...interface{}) (
-	queryRows *QueryRows, err error) {
+	queryRows *Rows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
@@ -65,7 +65,7 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 
 // QueryRowWithContext 执行MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...interface{}) (
-	row *QueryRow, err error) {
+	row *Row, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -88,9 +88,56 @@ func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...in
 	return
 }
 
+// QueryRows 执行MySQL Query语句，返回多条数据
+func QueryRows(ctx context.Context, conn *sql.Conn, querySQL string, args ...interface{}) (
+	queryRows *Rows, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("query rows in TX failed <-- %s", err.Error())
+		}
+	}()
+
+	rawRows, err := conn.QueryContext(ctx, querySQL, args...)
+	// rawRows, err := db.Query(stmt)
+	defer func() {
+		if rawRows != nil {
+			_ = rawRows.Close()
+		}
+	}()
+	if err != nil {
+		return
+	}
+
+	colTypes, err := rawRows.ColumnTypes()
+	if err != nil {
+		return
+	}
+
+	fields := make([]Field, 0, len(colTypes))
+	for _, colType := range colTypes {
+		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
+	}
+
+	queryRows = newQueryRows()
+	queryRows.Fields = fields
+	for rawRows.Next() {
+		receiver := createReceivers(fields)
+		err = rawRows.Scan(receiver...)
+		if err != nil {
+			err = fmt.Errorf("scan rows failed <-- %s", err.Error())
+			return
+		}
+
+		queryRows.Records = append(queryRows.Records, getRecordFromReceiver(receiver, fields))
+	}
+
+	err = rawRows.Err()
+	return
+}
+
 // QueryRowsInTx 执行MySQL Query语句，返回多条数据
 func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
-	queryRows *QueryRows, err error) {
+	queryRows *Rows, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query rows in TX failed <-- %s", err.Error())
@@ -135,9 +182,27 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 	return
 }
 
+// QueryRow 执行MySQL Query语句，返回多条数据
+func QueryRow(ctx context.Context, conn *sql.Conn, querySQL string, args ...interface{}) (
+	row *Row, err error) {
+	rows, err := QueryRows(ctx, conn, querySQL, args...)
+	if err != nil {
+		return
+	}
+
+	if len(rows.Records) < 1 {
+		return
+	}
+
+	row = newQueryRow()
+	row.Fields = rows.Fields
+	row.Record = rows.Records[0]
+	return
+}
+
 // QueryRowInTx 执行MySQL Query语句，返回多条数据
 func QueryRowInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
-	row *QueryRow, err error) {
+	row *Row, err error) {
 	rows, err := QueryRowsInTx(ctx, tx, querySQL, args...)
 	if err != nil {
 		return
