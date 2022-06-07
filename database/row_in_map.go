@@ -250,14 +250,14 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	return
 }
 
-// RowsInMap 执行 MySQL Query语句，返回多条数据
+// QueryRowsInMap 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *RowsInMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
 	return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
 }
 
-// RowsInOrderedMap 执行 MySQL Query语句，返回多条数据
+// QueryRowsInOrderedMap 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
