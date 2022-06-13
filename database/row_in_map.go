@@ -148,6 +148,7 @@ type MySQL struct {
 	InterpolateParams bool
 	// https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
 	IsolationLevel string
+	Compress       bool
 
 	connectionLock sync.Mutex
 	rawDB          *sql.DB
@@ -1002,6 +1003,9 @@ func (m *MySQL) fillConnStr() string {
 	}
 	if m.UseSSL {
 		dbServerInfoStr = fmt.Sprintf("%s&tls=skip-verify", dbServerInfoStr)
+	}
+	if m.Compress {
+		dbServerInfoStr = fmt.Sprintf("%s&compress=true", dbServerInfoStr)
 	}
 	if m.IsolationLevel != "" {
 		dbServerInfoStr = fmt.Sprintf("%s&tx_isolation=%s", dbServerInfoStr, m.IsolationLevel)
