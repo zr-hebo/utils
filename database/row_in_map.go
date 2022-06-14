@@ -218,7 +218,7 @@ func (m *MySQL) RawDB() (db *sql.DB, err error) {
 	if m.rawDB == nil {
 		var conn *sql.DB
 		// mysql.UseZLibCgo = true
-		conn, err = sql.Open(m.DatabaseType, m.fillConnStr())
+		conn, err = sql.Open("mysql_compress", m.fillConnStr())
 		if err != nil {
 			return nil, err
 		}

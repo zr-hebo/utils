@@ -13,7 +13,7 @@ func Test_GetConnInfo(t *testing.T) {
 	port := 3306
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/", userName, passwd, ip, port)
 
-	conn, err := sql.Open("mysql", connStr)
+	conn, err := sql.Open("mysql_compress", connStr)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
