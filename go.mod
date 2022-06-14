@@ -1,6 +1,6 @@
 module github.com/zr-hebo/utils
 
-go 1.14
+go 1.15
 
 replace github.com/go-sql-driver/mysql v1.6.0 => github.com/Pooh-Mucho/mysql v1.5.0
 

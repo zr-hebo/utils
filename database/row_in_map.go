@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Pooh-Mucho/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/zr-hebo/utils/container"
 )
 
