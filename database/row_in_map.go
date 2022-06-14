@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Pooh-Mucho/mysql"
 	"github.com/zr-hebo/utils/container"
 )
 
@@ -216,6 +217,7 @@ func (m *MySQL) RawDB() (db *sql.DB, err error) {
 
 	if m.rawDB == nil {
 		var conn *sql.DB
+		mysql.UseZLibCgo = true
 		conn, err = sql.Open(m.DatabaseType, m.fillConnStr())
 		if err != nil {
 			return nil, err
