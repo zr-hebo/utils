@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func Test_GetConnInfo(t *testing.T) {
@@ -13,7 +15,7 @@ func Test_GetConnInfo(t *testing.T) {
 	port := 3306
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/", userName, passwd, ip, port)
 
-	conn, err := sql.Open("mysql_compress", connStr)
+	conn, err := sql.Open("mysql", connStr)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
