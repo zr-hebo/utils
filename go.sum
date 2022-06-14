@@ -1,7 +1,5 @@
 github.com/Pooh-Mucho/go-mysql-stdzlib v0.0.0-20200618055944-52e80a3e5c87 h1:QnGIk+I528TxsHZVXtkHWU8rdoSos7XOGgc6mWpQnfM=
 github.com/Pooh-Mucho/go-mysql-stdzlib v0.0.0-20200618055944-52e80a3e5c87/go.mod h1:IN8q7zmgOeC0Nzj13H3nASAK4p1DmQt4gbYIOhPfKOs=
-github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
-github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/hungrybirder/cityhash v1.1.0 h1:uxJQm0zfDYV6JXfnKga+aIvboJi1arzaLBB1kGrYbdQ=

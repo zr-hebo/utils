@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/Pooh-Mucho/go-mysql-stdzlib"
 )
 
 func Test_GetConnInfo(t *testing.T) {
