@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
-
-	_ "github.com/Pooh-Mucho/go-mysql-stdzlib"
 )
 
 func Test_GetConnInfo(t *testing.T) {
