@@ -150,6 +150,9 @@ type MySQL struct {
 	IsolationLevel string
 	Compress       bool
 
+	retryTimes    int
+	retryInterval time.Duration
+
 	connectionLock sync.Mutex
 	rawDB          *sql.DB
 }
@@ -165,6 +168,8 @@ func NewMySQL(
 	mysql.UserName = userName
 	mysql.Passwd = passwd
 	mysql.DBName = dbName
+	mysql.retryTimes = 1
+	mysql.retryInterval = time.Second
 
 	return
 }
@@ -180,14 +185,23 @@ func NewMySQLWithTimeout(
 	mysql.UserName = userName
 	mysql.Passwd = passwd
 	mysql.DBName = dbName
+	mysql.retryTimes = 1
+	mysql.retryInterval = time.Second
 
 	return
+}
+
+func (m *MySQL) SetRetryTimes(retryTimes int) {
+	m.retryTimes = retryTimes
+}
+
+func (m *MySQL) SetRetryInterval(interval time.Duration) {
+	m.retryInterval = interval
 }
 
 // SetConnMaxLifetime 设置连接超时时间
 func (m *MySQL) SetConnMaxLifetime(lifetime int) {
 	m.MaxLifetime = lifetime
-	return
 }
 
 // SetMaxIdleConns 设置最大空闲连接
@@ -251,23 +265,68 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	return
 }
 
-// QueryRowsInMap 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows *RowsInMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		queryRows, err = m.queryRowsInMap(querySQL, args...)
+		if err == nil {
+			return
+		}
+
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
+}
+
+// QueryRowsInMap 执行 MySQL Query语句，返回多条数据
+func (m *MySQL) queryRowsInMap(querySQL string, args ...interface{}) (queryRows *RowsInMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
-	return m.QueryRowsInMapWithContext(ctx, querySQL, args...)
+	return m.queryRowsInMapWithContext(ctx, querySQL, args...)
+}
+
+func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
+	queryRows *RowsInOrderedMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		queryRows, err = m.queryRowsInOrderedMap(querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
 }
 
 // QueryRowsInOrderedMap 执行 MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
+func (m *MySQL) queryRowsInOrderedMap(querySQL string, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
-	return m.QueryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+	return m.queryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+}
+
+func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	queryRows *RowsInMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		queryRows, err = m.queryRowsInMapWithContext(ctx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
 }
 
 // QueryRowsInMapWithContext 执行 MySQL Query语句，返回多条数据
-func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+func (m *MySQL) queryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	queryRows *RowsInMap, err error) {
 	defer func() {
 		if err != nil {
@@ -289,8 +348,23 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	return
 }
 
-// QueryRowsInOrderedMapWithContext 执行 MySQL Query语句，返回多条数据
 func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	queryRows *RowsInOrderedMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		queryRows, err = m.queryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
+}
+
+// QueryRowsInOrderedMapWithContext 执行 MySQL Query语句，返回多条数据
+func (m *MySQL) queryRowsInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
@@ -309,6 +383,20 @@ func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL s
 	}
 
 	queryRows, err = QueryRowsWithOrderedMap(ctx, session, querySQL, args...)
+	return
+}
+
+func QueryRowsInMapWithRetry(ctx context.Context, conn *sql.Conn, querySQL string, retryTimes int, args ...interface{}) (queryRows *RowsInMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		queryRows, err = QueryRowsWithMap(ctx, conn, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	return
 }
 
@@ -353,6 +441,21 @@ func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args
 	return
 }
 
+func QueryRowsWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, querySQL string, retryTimes int, args ...interface{}) (
+	queryRows *RowsInMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		queryRows, err = QueryRowsWithMapInTx(ctx, tx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+	return
+}
+
 // QueryRowsWithMapInTx 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
 	queryRows *RowsInMap, err error) {
@@ -391,6 +494,22 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 	}
 
 	err = rawRows.Err()
+	return
+}
+
+func QueryRowsWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, querySQL string, retryTimes int, args ...interface{}) (
+	queryRows *RowsInOrderedMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		queryRows, err = QueryRowsWithOrderedMap(ctx, conn, querySQL, args...)
+		if err == nil {
+			return
+		}
+
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	return
 }
 
@@ -435,6 +554,21 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 	return
 }
 
+func QueryRowsWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, querySQL string, retryTimes int, args ...interface{}) (
+	queryRows *RowsInOrderedMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		queryRows, err = QueryRowsWithOrderedMapInTx(ctx, tx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+	return
+}
+
 // QueryRowsWithOrderedMapInTx 执行 MySQL Query语句，返回多条数据
 func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
@@ -476,6 +610,21 @@ func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL strin
 	return
 }
 
+func QueryRowWithMapWithRetry(ctx context.Context, conn *sql.Conn, stmt string, retryTimes int, args ...interface{}) (
+	queryRows *RowInMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		queryRows, err = QueryRowWithMap(ctx, conn, stmt, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+	return
+}
+
 // QueryRowWithMap 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...interface{}) (
 	row *RowInMap, err error) {
@@ -497,6 +646,21 @@ func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...i
 	row = newQueryRowInMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
+	return
+}
+
+func QueryRowWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt string, retryTimes int, args ...interface{}) (
+	row *RowInMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		row, err = QueryRowWithMapInTx(ctx, tx, stmt, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	return
 }
 
@@ -525,6 +689,21 @@ func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...i
 	return
 }
 
+func QueryRowWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, stmt string, retryTimes int, args ...interface{}) (
+	row *RowInOrderedMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		row, err = QueryRowWithOrderedMap(ctx, conn, stmt, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
+	return
+}
+
 // QueryRowWithOrderedMap 执行 MySQL Query语句，返回１条或０条数据
 func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, args ...interface{}) (
 	row *RowInOrderedMap, err error) {
@@ -546,6 +725,21 @@ func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, ar
 	row = newQueryRowInOrderedMap()
 	row.Fields = queryRows.Fields
 	row.Record = queryRows.Records[0]
+	return
+}
+
+func QueryRowWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt string, retryTimes int, args ...interface{}) (
+	row *RowInOrderedMap, err error) {
+	for i := 0; i < retryTimes; i++ {
+		row, err = QueryRowWithOrderedMapInTx(ctx, tx, stmt, args...)
+		if err == nil {
+			return
+		}
+		if i != retryTimes-1 {
+			time.Sleep(time.Second * 1)
+		}
+	}
+
 	return
 }
 
@@ -573,8 +767,23 @@ func QueryRowWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, stmt string, ar
 	return
 }
 
+func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (
+	row *RowInMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		row, err = m.queryRowInMap(stmt, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
+}
+
 // RowInMap 执行 MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *RowInMap, err error) {
+func (m *MySQL) queryRowInMap(querySQL string, args ...interface{}) (row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -583,11 +792,26 @@ func (m *MySQL) QueryRowInMap(querySQL string, args ...interface{}) (row *RowInM
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
-	return m.QueryRowInMapWithContext(ctx, querySQL, args...)
+	return m.queryRowInMapWithContext(ctx, querySQL, args...)
+}
+
+func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (
+	row *RowInOrderedMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		row, err = m.queryRowInOrderedMap(querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
 }
 
 // RowInOrderedMap 执行 MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row *RowInOrderedMap, err error) {
+func (m *MySQL) queryRowInOrderedMap(querySQL string, args ...interface{}) (row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("query row failed <-- %s", err.Error())
@@ -596,11 +820,26 @@ func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (row 
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.QueryTimeout)*time.Second)
 	defer cancel()
-	return m.QueryRowInOrderedMapWithContext(ctx, querySQL, args...)
+	return m.queryRowInOrderedMapWithContext(ctx, querySQL, args...)
+}
+
+func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	row *RowInMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		row, err = m.queryRowInMapWithContext(ctx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
 }
 
 // QueryRowInMapWithContext 执行 MySQL Query语句，返回１条或０条数据
-func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+func (m *MySQL) queryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
@@ -608,7 +847,7 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, a
 		}
 	}()
 
-	queryRows, err := m.QueryRowsInMapWithContext(ctx, querySQL, args...)
+	queryRows, err := m.queryRowsInMapWithContext(ctx, querySQL, args...)
 	if err != nil || queryRows == nil {
 		return
 	}
@@ -624,8 +863,23 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, a
 	return
 }
 
-// QueryRowInOrderedMapWithContext 执行 MySQL Query语句，返回１条或０条数据
 func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
+	row *RowInOrderedMap, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		row, err = m.queryRowInOrderedMapWithContext(ctx, querySQL, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
+}
+
+// QueryRowInOrderedMapWithContext 执行 MySQL Query语句，返回１条或０条数据
+func (m *MySQL) queryRowInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
@@ -633,7 +887,7 @@ func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL st
 		}
 	}()
 
-	resp, err := m.QueryRowsInOrderedMapWithContext(ctx, querySQL, args...)
+	resp, err := m.queryRowsInOrderedMapWithContext(ctx, querySQL, args...)
 	if err != nil || resp == nil {
 		return
 	}
@@ -1014,8 +1268,22 @@ func (m *MySQL) fillConnStr() string {
 	return dbServerInfoStr
 }
 
+func (m *MySQL) Exec(query string, args ...interface{}) (result sql.Result, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		result, err = m.exec(query, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+
+	return
+}
+
 // Exec 执行 MySQL dml语句，返回执行结果
-func (m *MySQL) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (m *MySQL) exec(query string, args ...interface{}) (sql.Result, error) {
 	session, err := m.OpenSession(context.Background())
 	if session != nil {
 		defer session.Close()
@@ -1026,8 +1294,21 @@ func (m *MySQL) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return session.ExecContext(context.Background(), query, args...)
 }
 
+func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface{}) (result sql.Result, err error) {
+	for i := 0; i < m.retryTimes; i++ {
+		result, err = m.execContext(ctx, query, args...)
+		if err == nil {
+			return
+		}
+		if i != m.retryTimes-1 {
+			time.Sleep(m.retryInterval)
+		}
+	}
+	return
+}
+
 // ExecContext 执行MySQL dml语句，返回执行结果
-func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (m *MySQL) execContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	session, err := m.OpenSession(ctx)
 	defer func() {
 		if session != nil {
