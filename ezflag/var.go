@@ -70,7 +70,7 @@ func PrintAllUsage() {
 
 func getKeyFromFlag(flag string) string {
 	fields := strings.SplitAfterN(flag, "=", 2)
-	return strings.TrimLeft(fields[0], "-")
+	return strings.TrimRight(strings.TrimLeft(fields[0], "-"), "=")
 }
 
 func Parse(reservedKeys []string) error {
