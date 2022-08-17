@@ -83,7 +83,8 @@ func Parse(reservedKeys []string) error {
 		reservedKeyInMap[key] = true
 	}
 	for _, arg := range os.Args[1:] {
-		if reservedKeyInMap[getKeyFromFlag(arg)] {
+		argKey := getKeyFromFlag(arg)
+		if reservedKeyInMap[argKey] {
 			reservedArgs = append(reservedArgs, arg)
 		} else {
 			userArgs = append(userArgs, arg)
