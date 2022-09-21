@@ -41,6 +41,9 @@ func (cc *ConController) RunningNum() int {
 
 func (cc *ConController) Wait(ctx context.Context) {
 	ticker := time.NewTicker(time.Millisecond * 10)
+	defer func() {
+		ticker.Stop()
+	}()
 	for {
 		select {
 		case <-ctx.Done():
