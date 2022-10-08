@@ -10,7 +10,7 @@ import (
 type ConControllerWithError struct {
 	allowSize      int
 	runningNum     int
-	lock           sync.Mutex
+	lock           sync.RWMutex
 	workerChan     chan struct{}
 	errorCollector error
 }
@@ -55,6 +55,8 @@ func (cce *ConControllerWithError) Release() {
 }
 
 func (cce *ConControllerWithError) RunningNum() int {
+	cce.lock.RLock()
+	defer cce.lock.RUnlock()
 	return cce.runningNum
 }
 
@@ -70,7 +72,7 @@ func (cce *ConControllerWithError) Wait(ctx context.Context) {
 			return
 
 		case <-ticker.C:
-			if cce.runningNum == 0 {
+			if cce.RunningNum() == 0 {
 				return
 			}
 		}
