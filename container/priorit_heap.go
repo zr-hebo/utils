@@ -46,7 +46,7 @@ func (self *PriorityHeap) Enqueue(node ComparableNode) {
 			return
 		}
 
-		parentPos := pos / 2
+		parentPos := (pos - 1) / 2
 		if !self.nodes[pos].Less(self.nodes[parentPos]) {
 			return
 		}
