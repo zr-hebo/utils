@@ -330,7 +330,7 @@ func (m *MySQL) queryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	queryRows *RowsInMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+			err = fmt.Errorf("query rows on %s:%d failed, SQL: %s, args: %v <-- %s", m.IP, m.Port, querySQL, args, err.Error())
 		}
 	}()
 
@@ -368,7 +368,7 @@ func (m *MySQL) queryRowsInOrderedMapWithContext(ctx context.Context, querySQL s
 	queryRows *RowsInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+			err = fmt.Errorf("query rows on %s:%d failed, SQL: %s, args: %v <-- %s", m.IP, m.Port, querySQL, args, err.Error())
 		}
 	}()
 
@@ -630,7 +630,7 @@ func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...i
 	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", stmt, args, err.Error())
 		}
 	}()
 
@@ -669,7 +669,7 @@ func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...i
 	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", stmt, args, err.Error())
 		}
 	}()
 
@@ -709,7 +709,7 @@ func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, ar
 	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", stmt, args, err.Error())
 		}
 	}()
 
@@ -748,7 +748,7 @@ func QueryRowWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, stmt string, ar
 	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", stmt, args, err.Error())
 		}
 	}()
 
@@ -786,7 +786,7 @@ func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (
 func (m *MySQL) queryRowInMap(querySQL string, args ...interface{}) (row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
@@ -814,7 +814,7 @@ func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (
 func (m *MySQL) queryRowInOrderedMap(querySQL string, args ...interface{}) (row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v  <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
@@ -843,7 +843,7 @@ func (m *MySQL) queryRowInMapWithContext(ctx context.Context, querySQL string, a
 	row *RowInMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
@@ -883,7 +883,7 @@ func (m *MySQL) queryRowInOrderedMapWithContext(ctx context.Context, querySQL st
 	row *RowInOrderedMap, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
