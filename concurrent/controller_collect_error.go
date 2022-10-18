@@ -44,6 +44,8 @@ func (cce *ConControllerWithError) CollectError(err error) {
 }
 
 func (cce *ConControllerWithError) Error() error {
+	cce.lock.RLock()
+	defer cce.lock.RUnlock()
 	return cce.errorCollector
 }
 
