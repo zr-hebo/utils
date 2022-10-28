@@ -132,14 +132,16 @@ func newQueryRows() *Rows {
 // MySQL Mysql主机实例
 type MySQL struct {
 	Host
-	UserName         string
-	Passwd           string
-	DatabaseType     string
-	DBName           string
-	MultiStatements  bool
-	MaxLifetime      int
-	MaxIdleTime      int
-	QueryTimeout     int
+	UserName        string
+	Passwd          string
+	DatabaseType    string
+	DBName          string
+	MultiStatements bool
+	MaxLifetime     int
+	MaxIdleTime     int
+	QueryTimeout    int
+	// https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_max_execution_time
+	// the unit is millisecond
 	MaxExecutionTime int
 	UseSSL           bool
 	MaxAllowedPacket int
