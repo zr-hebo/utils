@@ -132,14 +132,17 @@ func newQueryRows() *Rows {
 // MySQL Mysql主机实例
 type MySQL struct {
 	Host
-	UserName         string
-	Passwd           string
-	DatabaseType     string
-	DBName           string
-	MultiStatements  bool
-	MaxLifetime      int
-	MaxIdleTime      int
-	QueryTimeout     int
+	UserName        string
+	Passwd          string
+	DatabaseType    string
+	DBName          string
+	MultiStatements bool
+	MaxLifetime     int
+	MaxIdleTime     int
+	QueryTimeout    int
+	// https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_max_execution_time
+	// the unit is millisecond
+	MaxExecutionTime int
 	UseSSL           bool
 	MaxAllowedPacket int
 	maxIdleConns     int
@@ -212,6 +215,10 @@ func (m *MySQL) SetMaxIdleConns(n int) {
 // SetMaxOpenConns 设置最大连接数
 func (m *MySQL) SetMaxOpenConns(n int) {
 	m.maxOpenConns = n
+}
+
+func (m *MySQL) SetMaxExecutionTime(maxExecutionTime int) {
+	m.MaxExecutionTime = maxExecutionTime
 }
 
 // Close 关闭数据库连接
@@ -1254,6 +1261,9 @@ func (m *MySQL) fillConnStr() string {
 	if m.QueryTimeout > 0 {
 		dbServerInfoStr = fmt.Sprintf("%s&timeout=3s&readTimeout=%ds&writeTimeout=%ds",
 			dbServerInfoStr, m.QueryTimeout, m.QueryTimeout)
+	}
+	if m.MaxExecutionTime > 0 {
+		dbServerInfoStr = fmt.Sprintf("%s&max_execution_time=%d", dbServerInfoStr, m.MaxExecutionTime)
 	}
 	if m.UseSSL {
 		dbServerInfoStr = fmt.Sprintf("%s&tls=skip-verify", dbServerInfoStr)
