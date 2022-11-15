@@ -1,8 +1,8 @@
 package strings
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 )
 
 func BuildString(args ...string) string {
@@ -10,16 +10,11 @@ func BuildString(args ...string) string {
 		return ""
 	}
 
-	strLen := 4
+	var sb strings.Builder
 	for _, arg := range args {
-		strLen += len(arg)
+		fmt.Fprint(&sb, arg)
 	}
-
-	sb := bytes.NewBuffer(make([]byte, 0, strLen))
-	for _, arg := range args {
-		sb.WriteString(arg)
-	}
-	return HackString(sb.Bytes())
+	return sb.String()
 }
 
 func ConcatValueInSlice(vals []interface{}) string {
@@ -27,13 +22,13 @@ func ConcatValueInSlice(vals []interface{}) string {
 		return "NULL"
 	}
 
-	sb := bytes.NewBuffer(make([]byte, 0, 32))
+	var sb strings.Builder
 	var sep = ""
 	for _, val := range vals {
-		sb.WriteString(sep)
-		sb.WriteString(fmt.Sprint(val))
+		fmt.Fprint(&sb, sep)
+		fmt.Fprint(&sb, fmt.Sprint(val))
 		sep = "#"
 	}
 
-	return HackString(sb.Bytes())
+	return sb.String()
 }
