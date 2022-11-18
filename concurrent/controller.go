@@ -2,9 +2,7 @@ package concurrent
 
 import (
 	"context"
-	"fmt"
 	"sync"
-	"time"
 )
 
 type ConController struct {
@@ -29,10 +27,10 @@ func (cc *ConController) Acquire() {
 }
 
 func (cc *ConController) Release() {
-	<-cc.workerChan
 	cc.lock.Lock()
 	cc.runningNum--
 	cc.lock.Unlock()
+	<-cc.workerChan
 }
 
 func (cc *ConController) RunningNum() int {
@@ -42,21 +40,17 @@ func (cc *ConController) RunningNum() int {
 }
 
 func (cc *ConController) Wait(ctx context.Context) {
-	ticker := time.NewTicker(time.Millisecond * 10)
-	defer func() {
-		ticker.Stop()
-	}()
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("concurrent controller cancel wait for context canceled")
+			close(cc.workerChan)
 			return
+		case cc.workerChan <- struct{}{}:
+		}
 
-		case <-ticker.C:
-			if cc.RunningNum() == 0 {
-				return
-			}
+		if cc.RunningNum() == 0 {
+			close(cc.workerChan)
+			return
 		}
 	}
-	return
 }

@@ -6,8 +6,12 @@ import (
 )
 
 func TestRace(t *testing.T) {
+	execOnceCheck()
+}
+
+func execOnceCheck() {
 	n := 10000
-	cc := NewConControllerWithError(n)
+	cc := NewConControllerWithError(100)
 	for i := 0; i < n; i++ {
 		cc.Acquire()
 
@@ -17,4 +21,10 @@ func TestRace(t *testing.T) {
 	}
 
 	cc.Wait(context.Background())
+}
+
+func BenchmarkConController(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		execOnceCheck()
+	}
 }

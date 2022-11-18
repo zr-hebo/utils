@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 )
 
 type ConControllerWithError struct {
@@ -50,10 +49,10 @@ func (cce *ConControllerWithError) Error() error {
 }
 
 func (cce *ConControllerWithError) Release() {
-	<-cce.workerChan
 	cce.lock.Lock()
 	cce.runningNum--
 	cce.lock.Unlock()
+	<-cce.workerChan
 }
 
 func (cce *ConControllerWithError) RunningNum() int {
@@ -62,21 +61,22 @@ func (cce *ConControllerWithError) RunningNum() int {
 	return cce.runningNum
 }
 
+func (cce *ConControllerWithError) Size() int {
+	return cce.allowSize
+}
+
 func (cce *ConControllerWithError) Wait(ctx context.Context) {
-	ticker := time.NewTicker(time.Millisecond * 10)
-	defer func() {
-		ticker.Stop()
-	}()
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("concurrent controller cancel wait for context canceled")
+			close(cce.workerChan)
 			return
+		case cce.workerChan <- struct{}{}:
+		}
 
-		case <-ticker.C:
-			if cce.RunningNum() == 0 {
-				return
-			}
+		if cce.RunningNum() == 0 {
+			close(cce.workerChan)
+			return
 		}
 	}
 }
