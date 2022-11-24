@@ -66,16 +66,21 @@ func (cce *ConControllerWithError) Size() int {
 }
 
 func (cce *ConControllerWithError) Wait(ctx context.Context) {
+	defer func() {
+		close(cce.workerChan)
+	}()
+	if cce.allowSize == 0 {
+		return
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			close(cce.workerChan)
 			return
 		case cce.workerChan <- struct{}{}:
 		}
 
 		if cce.RunningNum() == 0 {
-			close(cce.workerChan)
 			return
 		}
 	}

@@ -40,16 +40,21 @@ func (cc *ConController) RunningNum() int {
 }
 
 func (cc *ConController) Wait(ctx context.Context) {
+	defer func() {
+		close(cc.workerChan)
+	}()
+	if cc.allowSize == 0 {
+		return
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			close(cc.workerChan)
 			return
 		case cc.workerChan <- struct{}{}:
 		}
 
 		if cc.RunningNum() == 0 {
-			close(cc.workerChan)
 			return
 		}
 	}

@@ -9,6 +9,11 @@ func TestRace(t *testing.T) {
 	execOnceCheck()
 }
 
+func TestEmptyCondition(t *testing.T) {
+	cc := NewConControllerWithError(0)
+	cc.Wait(context.Background())
+}
+
 func execOnceCheck() {
 	n := 10000
 	cc := NewConControllerWithError(100)
