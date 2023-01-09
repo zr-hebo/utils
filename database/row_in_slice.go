@@ -286,7 +286,7 @@ func getRecordFromReceiver(receiver []interface{}, fields []Field) (record []int
 					record[idx] = nullVal.Bool
 				}
 			}
-		case "blob", "binary":
+		case "binary":
 			{
 				rawVal := value.(*sql.RawBytes)
 				if rawVal != nil && *rawVal != nil {

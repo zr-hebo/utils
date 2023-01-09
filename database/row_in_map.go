@@ -1005,11 +1005,6 @@ func createReceivers(fields []Field) (receivers []interface{}) {
 				var val sql.RawBytes
 				receivers = append(receivers, &val)
 			}
-		case "blob":
-			{
-				var val sql.RawBytes
-				receivers = append(receivers, &val)
-			}
 		default:
 			var val sql.NullString
 			receivers = append(receivers, &val)
@@ -1092,7 +1087,7 @@ func getRecordInMapFromReceiver(receiver []interface{}, fields []Field) (record 
 					record[field.Name] = nullVal.Bool
 				}
 			}
-		case "blob":
+		case "binary":
 			{
 				rawVal := value.(*sql.RawBytes)
 				record[field.Name] = nil
@@ -1190,7 +1185,7 @@ func getRecordInOrderedMapFromReceiver(receiver []interface{}, fields []Field) (
 					record.Set(field.Name, nullVal.Bool)
 				}
 			}
-		case "blob":
+		case "binary":
 			{
 				rawVal := value.(*sql.RawBytes)
 				record.Set(field.Name, nil)
@@ -1233,11 +1228,11 @@ var columnTypeDict = map[string]string{
 	"INTEGER":    "int32",
 	"BIGINT":     "int64",
 	"BINARY":     "binary",
-	"VARBINARY":  "blob",
-	"BLOB":       "blob",
-	"TINYBLOB":   "blob",
-	"MEDIUMBLOB": "blob",
-	"LONGBLOB":   "blob",
+	"VARBINARY":  "binary",
+	"BLOB":       "binary",
+	"TINYBLOB":   "binary",
+	"MEDIUMBLOB": "binary",
+	"LONGBLOB":   "binary",
 	"TEXT":       "string",
 	"TINYTEXT":   "string",
 	"MEDIUMTEXT": "string",
