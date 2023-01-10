@@ -9,8 +9,8 @@ import (
 )
 
 func Test_GetConnInfo(t *testing.T) {
-	userName := "test"
-	passwd := "test123456"
+	userName := "test_user"
+	passwd := "123456test"
 	ip := "localhost"
 	port := 3306
 	connStr := fmt.Sprintf("%s:%s@tcp(%s:%d)/", userName, passwd, ip, port)
