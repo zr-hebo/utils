@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zr-hebo/utils/concurrent"
 	"github.com/zr-hebo/utils/container"
 )
 
@@ -280,7 +281,7 @@ func (m *MySQL) QueryRowsInMap(querySQL string, args ...interface{}) (queryRows 
 		}
 
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(context.Background(), m.retryInterval)
 		}
 	}
 
@@ -302,7 +303,7 @@ func (m *MySQL) QueryRowsInOrderedMap(querySQL string, args ...interface{}) (
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(context.Background(), m.retryInterval)
 		}
 	}
 
@@ -320,12 +321,18 @@ func (m *MySQL) queryRowsInOrderedMap(querySQL string, args ...interface{}) (
 func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	queryRows *RowsInMap, err error) {
 	for i := 0; i < m.retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = m.queryRowsInMapWithContext(ctx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(ctx, m.retryInterval)
 		}
 	}
 
@@ -358,12 +365,18 @@ func (m *MySQL) queryRowsInMapWithContext(ctx context.Context, querySQL string, 
 func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	for i := 0; i < m.retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = m.queryRowsInOrderedMapWithContext(ctx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(ctx, m.retryInterval)
 		}
 	}
 
@@ -395,12 +408,18 @@ func (m *MySQL) queryRowsInOrderedMapWithContext(ctx context.Context, querySQL s
 
 func QueryRowsInMapWithRetry(ctx context.Context, conn *sql.Conn, querySQL string, retryTimes int, args ...interface{}) (queryRows *RowsInMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = QueryRowsWithMap(ctx, conn, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -434,6 +453,12 @@ func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args
 	queryRows = newQueryRowsInMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
@@ -451,12 +476,18 @@ func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args
 func QueryRowsWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, querySQL string, retryTimes int, args ...interface{}) (
 	queryRows *RowsInMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = QueryRowsWithMapInTx(ctx, tx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -490,6 +521,12 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 	queryRows = newQueryRowsInMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
@@ -507,13 +544,19 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 func QueryRowsWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, querySQL string, retryTimes int, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = QueryRowsWithOrderedMap(ctx, conn, querySQL, args...)
 		if err == nil {
 			return
 		}
 
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -547,6 +590,12 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 	queryRows = newQueryRowsInOrderedMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
@@ -564,12 +613,18 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 func QueryRowsWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, querySQL string, retryTimes int, args ...interface{}) (
 	queryRows *RowsInOrderedMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = QueryRowsWithOrderedMapInTx(ctx, tx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -603,6 +658,12 @@ func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL strin
 	queryRows = newQueryRowsInOrderedMap()
 	queryRows.Fields = fields
 	for rawRows.Next() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		receiver := createReceivers(fields)
 		err = rawRows.Scan(receiver...)
 		if err != nil {
@@ -620,12 +681,18 @@ func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL strin
 func QueryRowWithMapWithRetry(ctx context.Context, conn *sql.Conn, stmt string, retryTimes int, args ...interface{}) (
 	queryRows *RowInMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		queryRows, err = QueryRowWithMap(ctx, conn, stmt, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -659,12 +726,18 @@ func QueryRowWithMap(ctx context.Context, conn *sql.Conn, stmt string, args ...i
 func QueryRowWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt string, retryTimes int, args ...interface{}) (
 	row *RowInMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		row, err = QueryRowWithMapInTx(ctx, tx, stmt, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -699,12 +772,18 @@ func QueryRowWithMapInTx(ctx context.Context, tx *sql.Tx, stmt string, args ...i
 func QueryRowWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, stmt string, retryTimes int, args ...interface{}) (
 	row *RowInOrderedMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		row, err = QueryRowWithOrderedMap(ctx, conn, stmt, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -738,12 +817,18 @@ func QueryRowWithOrderedMap(ctx context.Context, conn *sql.Conn, stmt string, ar
 func QueryRowWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt string, retryTimes int, args ...interface{}) (
 	row *RowInOrderedMap, err error) {
 	for i := 0; i < retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		row, err = QueryRowWithOrderedMapInTx(ctx, tx, stmt, args...)
 		if err == nil {
 			return
 		}
 		if i != retryTimes-1 {
-			time.Sleep(time.Second * 1)
+			concurrent.WaitWithDuration(ctx, time.Second*1)
 		}
 	}
 
@@ -782,7 +867,7 @@ func (m *MySQL) QueryRowInMap(stmt string, args ...interface{}) (
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(context.Background(), m.retryInterval)
 		}
 	}
 
@@ -810,7 +895,7 @@ func (m *MySQL) QueryRowInOrderedMap(querySQL string, args ...interface{}) (
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(context.Background(), m.retryInterval)
 		}
 	}
 
@@ -833,12 +918,18 @@ func (m *MySQL) queryRowInOrderedMap(querySQL string, args ...interface{}) (row 
 func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	row *RowInMap, err error) {
 	for i := 0; i < m.retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		row, err = m.queryRowInMapWithContext(ctx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(ctx, m.retryInterval)
 		}
 	}
 
@@ -873,12 +964,18 @@ func (m *MySQL) queryRowInMapWithContext(ctx context.Context, querySQL string, a
 func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL string, args ...interface{}) (
 	row *RowInOrderedMap, err error) {
 	for i := 0; i < m.retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		row, err = m.queryRowInOrderedMapWithContext(ctx, querySQL, args...)
 		if err == nil {
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(ctx, m.retryInterval)
 		}
 	}
 
@@ -1280,7 +1377,7 @@ func (m *MySQL) Exec(query string, args ...interface{}) (result sql.Result, err 
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(context.Background(), m.retryInterval)
 		}
 	}
 
@@ -1301,12 +1398,18 @@ func (m *MySQL) exec(query string, args ...interface{}) (sql.Result, error) {
 
 func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface{}) (result sql.Result, err error) {
 	for i := 0; i < m.retryTimes; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		result, err = m.execContext(ctx, query, args...)
 		if err == nil {
 			return
 		}
 		if i != m.retryTimes-1 {
-			time.Sleep(m.retryInterval)
+			concurrent.WaitWithDuration(ctx, m.retryInterval)
 		}
 	}
 	return
