@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -270,6 +271,7 @@ func (m *MySQL) OpenSession(ctx context.Context) (session *sql.Conn, err error) 
 	}
 
 	session, err = rawDB.Conn(ctx)
+
 	return
 }
 
@@ -1347,9 +1349,10 @@ func getDataType(dbColType string) (colType string) {
 }
 
 func (m *MySQL) fillConnStr() string {
+	zone := url.QueryEscape("+00:00")
 	dbServerInfoStr := fmt.Sprintf(
-		"%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v&maxAllowedPacket=%d",
-		m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams, m.MaxAllowedPacket)
+		"%s:%s@tcp(%s:%d)/%s?multiStatements=%v&interpolateParams=%v&maxAllowedPacket=%d&time_zone='%s'",
+		m.UserName, m.Passwd, m.IP, m.Port, m.DBName, m.MultiStatements, m.InterpolateParams, m.MaxAllowedPacket, zone)
 	if m.QueryTimeout > 0 {
 		dbServerInfoStr = fmt.Sprintf("%s&timeout=3s&readTimeout=%ds&writeTimeout=%ds",
 			dbServerInfoStr, m.QueryTimeout, m.QueryTimeout)
