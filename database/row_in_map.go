@@ -1327,6 +1327,7 @@ var columnTypeDict = map[string]string{
 	"INTEGER":    "int32",
 	"BIGINT":     "int64",
 	"BINARY":     "binary",
+	"BIT":        "binary",
 	"VARBINARY":  "binary",
 	"BLOB":       "binary",
 	"TINYBLOB":   "binary",
