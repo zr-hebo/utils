@@ -325,7 +325,7 @@ func (m *MySQL) QueryRowsInMapWithContext(ctx context.Context, querySQL string, 
 	for i := 0; i < m.retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -369,7 +369,7 @@ func (m *MySQL) QueryRowsInOrderedMapWithContext(ctx context.Context, querySQL s
 	for i := 0; i < m.retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -412,7 +412,7 @@ func QueryRowsInMapWithRetry(ctx context.Context, conn *sql.Conn, querySQL strin
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -457,7 +457,7 @@ func QueryRowsWithMap(ctx context.Context, conn *sql.Conn, querySQL string, args
 	for rawRows.Next() {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -480,7 +480,7 @@ func QueryRowsWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, querySQL str
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -525,7 +525,7 @@ func QueryRowsWithMapInTx(ctx context.Context, tx *sql.Tx, querySQL string, args
 	for rawRows.Next() {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -548,7 +548,7 @@ func QueryRowsWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, query
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -594,7 +594,7 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 	for rawRows.Next() {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -617,7 +617,7 @@ func QueryRowsWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, query
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -662,7 +662,7 @@ func QueryRowsWithOrderedMapInTx(ctx context.Context, tx *sql.Tx, querySQL strin
 	for rawRows.Next() {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -685,7 +685,7 @@ func QueryRowWithMapWithRetry(ctx context.Context, conn *sql.Conn, stmt string, 
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -730,7 +730,7 @@ func QueryRowWithMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt string, 
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -776,7 +776,7 @@ func QueryRowWithOrderedMapWithRetry(ctx context.Context, conn *sql.Conn, stmt s
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -821,7 +821,7 @@ func QueryRowWithOrderedMapInTxWithRetry(ctx context.Context, tx *sql.Tx, stmt s
 	for i := 0; i < retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -922,7 +922,7 @@ func (m *MySQL) QueryRowInMapWithContext(ctx context.Context, querySQL string, a
 	for i := 0; i < m.retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -968,7 +968,7 @@ func (m *MySQL) QueryRowInOrderedMapWithContext(ctx context.Context, querySQL st
 	for i := 0; i < m.retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -1404,7 +1404,7 @@ func (m *MySQL) ExecContext(ctx context.Context, query string, args ...interface
 	for i := 0; i < m.retryTimes; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		default:
 		}
 
