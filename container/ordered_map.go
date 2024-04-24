@@ -68,6 +68,7 @@ func (sm *OrderedMap) Pop() (kvItem *KVPair) {
 	if elem != nil {
 		sm.dataList.Remove(elem)
 		kvItem = elem.Value.(*KVPair)
+		delete(sm.keyMap, kvItem.Key)
 	}
 	return
 }
