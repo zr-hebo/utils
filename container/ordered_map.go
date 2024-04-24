@@ -9,9 +9,9 @@ import (
 	"sync"
 )
 
-type kvPairItem struct {
-	key string
-	val interface{}
+type KVPair struct {
+	Key string
+	Val interface{}
 }
 
 type OrderedMap struct {
@@ -54,10 +54,22 @@ func (sm *OrderedMap) Keys() []string {
 
 	keys := make([]string, 0, len(sm.keyMap))
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
-		kvItem := elem.Value.(*kvPairItem)
-		keys = append(keys, kvItem.key)
+		kvItem := elem.Value.(*KVPair)
+		keys = append(keys, kvItem.Key)
 	}
 	return keys
+}
+
+func (sm *OrderedMap) Pop() (kvItem *KVPair) {
+	sm.lock.RLock()
+	sm.lock.RUnlock()
+
+	elem := sm.dataList.Front()
+	if elem != nil {
+		sm.dataList.Remove(elem)
+		kvItem = elem.Value.(*KVPair)
+	}
+	return
 }
 
 func (sm *OrderedMap) Values() []interface{} {
@@ -66,8 +78,8 @@ func (sm *OrderedMap) Values() []interface{} {
 
 	vals := make([]interface{}, 0, len(sm.keyMap))
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
-		kvItem := elem.Value.(*kvPairItem)
-		vals = append(vals, kvItem.val)
+		kvItem := elem.Value.(*KVPair)
+		vals = append(vals, kvItem.Val)
 	}
 	return vals
 }
@@ -82,8 +94,8 @@ func (sm *OrderedMap) Get(key string) (val interface{}, ok bool) {
 	}
 
 	ok = true
-	kvItem := elem.Value.(*kvPairItem)
-	val = kvItem.val
+	kvItem := elem.Value.(*KVPair)
+	val = kvItem.Val
 	return
 }
 
@@ -91,17 +103,17 @@ func (sm *OrderedMap) Set(key string, val interface{}) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	var kvItem *kvPairItem
+	var kvItem *KVPair
 	elem := sm.keyMap[key]
 	if elem != nil {
-		kvItem = elem.Value.(*kvPairItem)
-		kvItem.val = val
+		kvItem = elem.Value.(*KVPair)
+		kvItem.Val = val
 		return
 	}
 
-	kvItem = &kvPairItem{
-		key: key,
-		val: val,
+	kvItem = &KVPair{
+		Key: key,
+		Val: val,
 	}
 	elem = sm.dataList.PushBack(kvItem)
 	sm.keyMap[key] = elem
@@ -118,8 +130,8 @@ func (sm *OrderedMap) Remove(key string) (val interface{}) {
 	}
 
 	delete(sm.keyMap, key)
-	kvItem := sm.dataList.Remove(elem).(*kvPairItem)
-	val = kvItem.val
+	kvItem := sm.dataList.Remove(elem).(*KVPair)
+	val = kvItem.Val
 	return
 }
 
@@ -128,9 +140,9 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 	defer sm.lock.RUnlock()
 
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
-		kvItem := elem.Value.(*kvPairItem)
+		kvItem := elem.Value.(*KVPair)
 		var breakFor bool
-		breakFor, err = visit(kvItem.key, kvItem.val)
+		breakFor, err = visit(kvItem.Key, kvItem.Val)
 		if err != nil {
 			return
 		}
@@ -163,10 +175,10 @@ func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 	sep := []byte{}
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
 		buf.Write(sep)
-		kvItem := elem.Value.(*kvPairItem)
-		buf.WriteString(strconv.Quote(kvItem.key))
+		kvItem := elem.Value.(*KVPair)
+		buf.WriteString(strconv.Quote(kvItem.Key))
 		buf.WriteByte(':')
-		valInBytes, err := json.Marshal(kvItem.val)
+		valInBytes, err := json.Marshal(kvItem.Val)
 		if err != nil {
 			return nil, err
 		}
