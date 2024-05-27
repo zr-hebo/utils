@@ -40,9 +40,6 @@ func (cc *ConController) RunningNum() int {
 }
 
 func (cc *ConController) Wait(ctx context.Context) {
-	defer func() {
-		close(cc.workerChan)
-	}()
 	if cc.allowSize == 0 {
 		return
 	}
@@ -57,5 +54,11 @@ func (cc *ConController) Wait(ctx context.Context) {
 		if cc.RunningNum() == 0 {
 			return
 		}
+	}
+}
+
+func (cc *ConController) Close() {
+	if cc.workerChan != nil {
+		close(cc.workerChan)
 	}
 }
