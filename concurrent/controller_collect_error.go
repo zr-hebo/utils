@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
 type ConControllerWithError struct {
@@ -66,22 +67,29 @@ func (cce *ConControllerWithError) Size() int {
 }
 
 func (cce *ConControllerWithError) Wait(ctx context.Context) {
-	defer func() {
-		close(cce.workerChan)
-	}()
 	if cce.allowSize == 0 {
 		return
 	}
+	ticker := time.NewTicker(time.Millisecond * 10)
+	defer func() {
+		ticker.Stop()
+	}()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case cce.workerChan <- struct{}{}:
+		case <-ticker.C:
 		}
 
 		if cce.RunningNum() == 0 {
 			return
 		}
+	}
+}
+
+func (cce *ConControllerWithError) Close() {
+	if cce.workerChan != nil {
+		close(cce.workerChan)
 	}
 }

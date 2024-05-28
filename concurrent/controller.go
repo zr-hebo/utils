@@ -3,6 +3,7 @@ package concurrent
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 type ConController struct {
@@ -44,11 +45,15 @@ func (cc *ConController) Wait(ctx context.Context) {
 		return
 	}
 
+	ticker := time.NewTicker(time.Millisecond * 10)
+	defer func() {
+		ticker.Stop()
+	}()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case cc.workerChan <- struct{}{}:
+		case <-ticker.C:
 		}
 
 		if cc.RunningNum() == 0 {
