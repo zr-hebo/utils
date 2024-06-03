@@ -1337,6 +1337,7 @@ var columnTypeDict = map[string]string{
 	"TINYTEXT":   "string",
 	"MEDIUMTEXT": "string",
 	"LONGTEXT":   "string",
+	"GEOMETRY":   "binary",
 }
 
 func getDataType(dbColType string) (colType string) {
