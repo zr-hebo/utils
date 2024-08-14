@@ -145,7 +145,8 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 		if idx >= len(sm.keyMap) {
 			return
 		}
-
+		idx += 1
+		
 		kvItem := elem.Value.(*KVPair)
 		var breakFor bool
 		breakFor, err = visit(kvItem.Key, kvItem.Val)
@@ -154,7 +155,7 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 		}
 
 		if breakFor {
-			break
+			return
 		}
 	}
 	return
