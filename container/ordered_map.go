@@ -140,7 +140,12 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 
+	idx := 0
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
+		if idx >= len(sm.keyMap) {
+			return
+		}
+
 		kvItem := elem.Value.(*KVPair)
 		var breakFor bool
 		breakFor, err = visit(kvItem.Key, kvItem.Val)
