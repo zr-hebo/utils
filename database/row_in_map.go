@@ -586,6 +586,9 @@ func QueryRowsWithOrderedMap(ctx context.Context, conn *sql.Conn, querySQL strin
 
 	fields := make([]Field, 0, len(colTypes))
 	for _, colType := range colTypes {
+		if colType.Name() == "" {
+			panic(fmt.Sprintf("unexpect colums types %#v", colTypes))
+		}
 		fields = append(fields, Field{Name: colType.Name(), Type: getDataType(colType.DatabaseTypeName())})
 	}
 
