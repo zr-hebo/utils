@@ -36,7 +36,7 @@ func NewOrderedMapWithSize(size int) (sm *OrderedMap) {
 
 func (sm *OrderedMap) Exist(key string) (ok bool) {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 
 	_, ok = sm.keyMap[key]
 	return
@@ -44,13 +44,13 @@ func (sm *OrderedMap) Exist(key string) (ok bool) {
 
 func (sm *OrderedMap) Size() int {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 	return len(sm.keyMap)
 }
 
 func (sm *OrderedMap) Keys() []string {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 
 	keys := make([]string, 0, len(sm.keyMap))
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
@@ -62,7 +62,7 @@ func (sm *OrderedMap) Keys() []string {
 
 func (sm *OrderedMap) Pop() (kvItem *KVPair) {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 
 	elem := sm.dataList.Front()
 	if elem != nil {
@@ -75,7 +75,7 @@ func (sm *OrderedMap) Pop() (kvItem *KVPair) {
 
 func (sm *OrderedMap) Values() []interface{} {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 
 	vals := make([]interface{}, 0, len(sm.keyMap))
 	for elem := sm.dataList.Front(); elem != nil; elem = elem.Next() {
@@ -146,7 +146,7 @@ func (sm *OrderedMap) Walk(visit func(key string, val interface{}) (breakFor boo
 			return
 		}
 		idx += 1
-		
+
 		kvItem := elem.Value.(*KVPair)
 		var breakFor bool
 		breakFor, err = visit(kvItem.Key, kvItem.Val)
@@ -175,7 +175,7 @@ func (sm *OrderedMap) String() string {
 
 func (sm *OrderedMap) MarshalJSON() ([]byte, error) {
 	sm.lock.RLock()
-	sm.lock.RUnlock()
+	defer sm.lock.RUnlock()
 
 	var buf = bytes.NewBuffer(make([]byte, 0, 32))
 	buf.WriteByte('{')
