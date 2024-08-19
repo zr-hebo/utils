@@ -45,6 +45,9 @@ func (sm *OrderedMap) Exist(key string) (ok bool) {
 func (sm *OrderedMap) Size() int {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
+	if sm.keyMap == nil {
+		return 0
+	}
 	return len(sm.keyMap)
 }
 
