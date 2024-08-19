@@ -24,6 +24,7 @@ func NewOrderedMap() (sm *OrderedMap) {
 	return &OrderedMap{
 		keyMap:   make(map[string]*list.Element, 16),
 		dataList: list.New(),
+		lock:     sync.RWMutex{},
 	}
 }
 
@@ -31,6 +32,7 @@ func NewOrderedMapWithSize(size int) (sm *OrderedMap) {
 	return &OrderedMap{
 		keyMap:   make(map[string]*list.Element, size),
 		dataList: list.New(),
+		lock:     sync.RWMutex{},
 	}
 }
 
