@@ -75,7 +75,7 @@ func (m *MySQL) QueryRowsWithContext(ctx context.Context, querySQL string, args 
 	queryRows *Rows, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows on %s:%d failed <-- %s", m.IP, m.Port, err.Error())
+			err = fmt.Errorf("query rows on %s:%d failed, SQL: %s, args: %v <-- %s", m.IP, m.Port, querySQL, args, err.Error())
 		}
 	}()
 
@@ -131,7 +131,7 @@ func (m *MySQL) QueryRowWithContext(ctx context.Context, stmt string, args ...in
 	row *Row, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query row failed <-- %s", err.Error())
+			err = fmt.Errorf("query row failed, SQL: %s, args: %v <-- %s", stmt, args, err.Error())
 		}
 	}()
 
@@ -156,7 +156,7 @@ func QueryRows(ctx context.Context, conn *sql.Conn, querySQL string, args ...int
 	queryRows *Rows, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows in TX failed <-- %s", err.Error())
+			err = fmt.Errorf("query rows in TX failed, SQL: %s, args: %v <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
@@ -203,7 +203,7 @@ func QueryRowsInTx(ctx context.Context, tx *sql.Tx, querySQL string, args ...int
 	queryRows *Rows, err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("query rows in TX failed <-- %s", err.Error())
+			err = fmt.Errorf("query rows in TX failed, SQL: %s, args: %v <-- %s", querySQL, args, err.Error())
 		}
 	}()
 
