@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"sync"
@@ -228,6 +229,42 @@ func DiffOrderedMap(from, to *OrderedMap) (fromDiff, toDiff *OrderedMap) {
 	})
 
 	to.Walk(func(key string, toVal interface{}) (breakFor bool, err error) {
+		_, ok := from.Get(key)
+		if !ok {
+			toDiff.Set(key, toVal)
+		}
+		return
+	})
+	return
+}
+
+func LogicDiffOrderedMap(from, to *OrderedMap) (fromDiff, toDiff *OrderedMap) {
+	if to == nil {
+		fromDiff = from
+		return
+	}
+	if from == nil {
+		toDiff = to
+		return
+	}
+
+	fromDiff = NewOrderedMap()
+	toDiff = NewOrderedMap()
+	_ = from.Walk(func(key string, fromVal interface{}) (breakFor bool, err error) {
+		toVal, ok := to.Get(key)
+		if !ok {
+			fromDiff.Set(key, fromVal)
+			return
+		}
+
+		if fmt.Sprint(fromVal) != fmt.Sprint(toVal) {
+			fromDiff.Set(key, fromVal)
+			toDiff.Set(key, toVal)
+		}
+		return
+	})
+
+	_ = to.Walk(func(key string, toVal interface{}) (breakFor bool, err error) {
 		_, ok := from.Get(key)
 		if !ok {
 			toDiff.Set(key, toVal)
