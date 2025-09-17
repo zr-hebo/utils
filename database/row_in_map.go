@@ -154,6 +154,7 @@ type MySQL struct {
 	// https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
 	IsolationLevel string
 	Compress       bool
+	RejectReadOnly bool
 
 	retryTimes    int
 	retryInterval time.Duration
@@ -1373,6 +1374,9 @@ func (m *MySQL) fillConnStr() string {
 	}
 	if m.UseSSL {
 		dbServerInfoStr = fmt.Sprintf("%s&tls=skip-verify", dbServerInfoStr)
+	}
+	if m.RejectReadOnly {
+		dbServerInfoStr = fmt.Sprintf("%s&rejectReadOnly=true", dbServerInfoStr)
 	}
 	if m.Compress {
 		dbServerInfoStr = fmt.Sprintf("%s&compress=true", dbServerInfoStr)
