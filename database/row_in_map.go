@@ -155,6 +155,9 @@ type MySQL struct {
 	IsolationLevel string
 	Compress       bool
 	RejectReadOnly bool
+	// https://github.com/go-sql-driver/mysql#charset
+	// 设置连接字符集，例如 utf8mb4
+	Charset string
 
 	retryTimes    int
 	retryInterval time.Duration
@@ -222,6 +225,11 @@ func (m *MySQL) SetMaxOpenConns(n int) {
 
 func (m *MySQL) SetMaxExecutionTime(maxExecutionTime int) {
 	m.MaxExecutionTime = maxExecutionTime
+}
+
+// SetCharset 设置连接字符集
+func (m *MySQL) SetCharset(charset string) {
+	m.Charset = charset
 }
 
 // Close 关闭数据库连接
@@ -1383,6 +1391,9 @@ func (m *MySQL) fillConnStr() string {
 	}
 	if m.IsolationLevel != "" {
 		dbServerInfoStr = fmt.Sprintf("%s&tx_isolation=%s", dbServerInfoStr, m.IsolationLevel)
+	}
+	if m.Charset != "" {
+		dbServerInfoStr = fmt.Sprintf("%s&charset=%s", dbServerInfoStr, m.Charset)
 	}
 
 	return dbServerInfoStr
